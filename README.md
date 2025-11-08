@@ -36,8 +36,12 @@ It’s meant as a simple helper tool for players, not an official product.
 
 ``` r
 # First time only:
-# source("install_packages.R")
+source("install_packages.R")
+```
+This will install all required packages before you start the app the first time.
+Then:
 
+``` r
 # Every time you want to start the app:
 library(shiny)
 runApp()
