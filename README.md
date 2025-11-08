@@ -1,14 +1,14 @@
-
 # Anomaly Tracker (The Entreprenauts helper)
 
 Anomaly Tracker is a small R/Shiny app that helps you plan and track
 searches on a grid for the game [**The
 Entreprenauts**](https://www.theentreprenauts.com).
 
-You can: - Create one or more “grids” (maps made of squares) - Drop
-different “probes” on the grid - Mark each drop as a **hit** or
-**miss**, with a direction - See which cells are still possible and get
-a suggested next drop
+You can:
+- Create one or more “grids” (maps made of squares)
+- Drop different “probes” on the grid
+- Mark each drop as a **hit** or **miss**, with a direction
+- See which cells are still possible and get a suggested next drop
 
 It’s meant as a simple helper tool for players, not an official product.
 
@@ -25,26 +25,39 @@ It’s meant as a simple helper tool for players, not an official product.
 
 ## 🔌 Quick start (TL;DR)
 
+0. **Install R and RStudio** (if you haven’t already):  
+   You can download RStudio Desktop (which also links to R installation
+   instructions) from <https://posit.co/download/rstudio-desktop/>.
+
 1. Double-click the project file (for example
-`entreprenauts_anomaly_tracker.Rproj`) to open the folder in
-**RStudio**. 2. In the RStudio **Console**, run:
+   `entreprenauts_anomaly_tracker.Rproj`) to open the folder in
+   **RStudio**.
 
-``` r
-# First time only:
-source("install_packages.R")
-```
-This will install all required packages before you start the app the first time.
-Then:
+2. In the RStudio **Console**, run:
 
-``` r
-# Every time you want to start the app:
-library(shiny)
-runApp()
-```
+   ``` r
+   # First time only:
+   source("install_packages.R")
+   ```
+
+   This will install all required packages before you start the app the first time.
+   Then:
+
+   ``` r
+   # Every time you want to start the app:
+   library(shiny)
+   runApp()
+   ```
 
 3.  Your browser should open the **Anomaly Tracker** app.
 
-If that works, you can stop reading here and just use the app. 🙂
+> ⚠️ **Current limitation**
+>
+> The automatic coordinate suggestions are still a bit buggy.  
+> For the most reliable results, **click directly on the grid** to pick
+> coordinates instead of relying on the suggested position.
+
+If all of that works, you can stop reading here and just use the app. 🙂
 
 ------------------------------------------------------------------------
 
@@ -122,7 +135,7 @@ installing packages one by one.
 This project includes a helper script: **`install_packages.R`**.
 
 1.  Locate the **project file** in this folder, for example:\
-    `AnomalyTracker.Rproj`
+    `entreprenauts_anomaly_tracker.Rproj`
 
 2.  Double-click that file to open the project in **RStudio**.
 
@@ -207,3 +220,14 @@ You can also:
     tab).
 -   **Import** a previously saved `.RDS` file to restore grids, probes,
     and colours.
+
+------------------------------------------------------------------------
+
+## Issues and feedback
+
+If you run into bugs, have questions, or want to suggest improvements:
+
+-   Open a **GitHub issue** in this repository, or
+-   Reach out on the **The Entreprenauts Discord** and mention the
+    Anomaly Tracker helper.
+
