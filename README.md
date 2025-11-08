@@ -19,6 +19,7 @@ It’s meant as a simple helper tool for players, not an official product.
 
 ## 🔌 Quick start (TL;DR)
 
+<<<<<<< HEAD
 1. Double-click the project file (for example `entreprenauts_anomaly_tracker.Rproj`) to open the folder in **RStudio**.
 2. In the RStudio **Console**, run:
 
