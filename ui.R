@@ -157,12 +157,28 @@ ui <- navbarPage(
         wellPanel(
           h4("Create / delete grids"),
           textInput("newGridID", "New grid ID", value = "gridA"),
-          numericInput("newGridRows", "Rows / Lat (Y)", value = 50, min = 5, step = 1),
-          numericInput("newGridCols", "Columns / Long (X)", value = 50, min = 5, step = 1),
+          numericInput(
+            "newGridCols",
+            "Columns / Long (X)",
+            value = 50,
+            min   = 5,
+            step  = 1
+          ),
+          numericInput(
+            "newGridRows",
+            "Rows / Lat (Y)",
+            value = 50,
+            min   = 5,
+            step  = 1
+          ),
           actionButton("createGrid", "Add grid"),
           hr(),
           selectInput("deleteGridID", "Grid to delete", choices = character(0)),
-          actionButton("deleteGrid", "Delete selected grid", class = "btn-danger btn-block btn-wrap")
+          actionButton(
+            "deleteGrid",
+            "Delete selected grid",
+            class = "btn-danger btn-block btn-wrap"
+          )
         ),
         wellPanel(
           h4("Import / export"),
