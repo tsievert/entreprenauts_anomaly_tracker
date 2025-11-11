@@ -343,7 +343,7 @@ y_to_row <- function(y, nr) {
   as.integer(round(y))
 }
 
-# ---------- Direction helpers (radius-limited line) ----------
+# ---------- Direction helpers (radius-limited line / square regions) ----------
 
 direction_line_mask <- function(nr, nc, cx, cy, dir, R) {
   if (is.null(dir) || is.na(dir) || !nzchar(dir)) {
@@ -363,7 +363,7 @@ direction_line_mask <- function(nr, nc, cx, cy, dir, R) {
   d <- toupper(as.character(dir[[1L]]))
   mask <- matrix(FALSE, nrow = nr, ncol = nc)
 
-  # BELOW: only the drop cell itself
+  # BELOW: only the drop cell itself remains possible
   if (identical(d, "BELOW")) {
     mask[cy, cx] <- TRUE
     return(mask)
@@ -374,8 +374,22 @@ direction_line_mask <- function(nr, nc, cx, cy, dir, R) {
     return(NULL)
   }
 
+  # Helper: safe clamp to grid
+  clamp_row <- function(lo, hi) {
+    lo <- max(1L, lo)
+    hi <- min(nr, hi)
+    list(lo = lo, hi = hi)
+  }
+
+  clamp_col <- function(lo, hi) {
+    lo <- max(1L, lo)
+    hi <- min(nc, hi)
+    list(lo = lo, hi = hi)
+  }
+
   steps <- seq_len(R)
 
+  # Cardinal directions: keep the existing 1-cell wide line behaviour
   if (identical(d, "N")) {
     for (k in steps) {
       r <- cy - k
@@ -404,33 +418,35 @@ direction_line_mask <- function(nr, nc, cx, cy, dir, R) {
       if (c < 1L) break
       mask[r, c] <- TRUE
     }
-  } else if (identical(d, "NE")) {
-    for (k in steps) {
-      r <- cy - k
-      c <- cx + k
-      if (r < 1L || c > nc) break
-      mask[r, c] <- TRUE
-    }
-  } else if (identical(d, "NW")) {
-    for (k in steps) {
-      r <- cy - k
-      c <- cx - k
-      if (r < 1L || c < 1L) break
-      mask[r, c] <- TRUE
-    }
+
+    # Diagonals: square regions between the two cardinals
   } else if (identical(d, "SE")) {
-    for (k in steps) {
-      r <- cy + k
-      c <- cx + k
-      if (r > nr || c > nc) break
-      mask[r, c] <- TRUE
+    # Rows strictly south, columns strictly east: (cy+1..cy+R, cx+1..cx+R)
+    rr <- clamp_row(cy + 1L, cy + R)
+    cc <- clamp_col(cx + 1L, cx + R)
+    if (rr$lo <= rr$hi && cc$lo <= cc$hi) {
+      mask[rr$lo:rr$hi, cc$lo:cc$hi] <- TRUE
     }
   } else if (identical(d, "SW")) {
-    for (k in steps) {
-      r <- cy + k
-      c <- cx - k
-      if (r > nr || c < 1L) break
-      mask[r, c] <- TRUE
+    # Rows strictly south, columns strictly west: (cy+1..cy+R, cx-R..cx-1)
+    rr <- clamp_row(cy + 1L, cy + R)
+    cc <- clamp_col(cx - R, cx - 1L)
+    if (rr$lo <= rr$hi && cc$lo <= cc$hi) {
+      mask[rr$lo:rr$hi, cc$lo:cc$hi] <- TRUE
+    }
+  } else if (identical(d, "NE")) {
+    # Rows strictly north, columns strictly east: (cy-R..cy-1, cx+1..cx+R)
+    rr <- clamp_row(cy - R, cy - 1L)
+    cc <- clamp_col(cx + 1L, cx + R)
+    if (rr$lo <= rr$hi && cc$lo <= cc$hi) {
+      mask[rr$lo:rr$hi, cc$lo:cc$hi] <- TRUE
+    }
+  } else if (identical(d, "NW")) {
+    # Rows strictly north, columns strictly west: (cy-R..cy-1, cx-R..cx-1)
+    rr <- clamp_row(cy - R, cy - 1L)
+    cc <- clamp_col(cx - R, cx - 1L)
+    if (rr$lo <= rr$hi && cc$lo <= cc$hi) {
+      mask[rr$lo:rr$hi, cc$lo:cc$hi] <- TRUE
     }
   } else {
     return(NULL)
