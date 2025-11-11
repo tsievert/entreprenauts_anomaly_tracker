@@ -728,11 +728,13 @@ server <- function(input, output, session) {
     df$fill <- dplyr::case_when(
       !df$possible ~ "impossible",
       df$tested ~ "tested",
+      isTRUE(gr$hasHit) ~ "hit",
       TRUE ~ "possible"
     )
 
     fill_map <- c(
       possible   = col_possible,
+      hit        = col_hit,
       tested     = col_tested,
       impossible = col_impossible
     )

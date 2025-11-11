@@ -227,7 +227,7 @@ ui <- navbarPage(
           h4("Grid colors"),
           textInput("colPossible", "Untested / possible cells", value = ""),
           textInput("colTested", "Tested cells", value = ""),
-          textInput("colHit", "Hit footprint / debug line", value = ""),
+          textInput("colHit", "Remaining candidates after hit / debug line", value = ""),
           textInput("colMiss", "Miss footprint", value = ""),
           textInput("colSuggestion", "Suggested drop center / outline", value = ""),
           textInput("colALBS", "ALBS window outline", value = ""),
