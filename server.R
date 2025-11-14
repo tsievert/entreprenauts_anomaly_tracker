@@ -816,11 +816,11 @@ server <- function(input, output, session) {
           df_line <- as.data.frame(idx_line)
           names(df_line) <- c("row", "col")
 
-          df_line <- df_line[
-            df_line$row >= r_view1 & df_line$row <= r_view2 &
-              df_line$col >= c_view1 & df_line$col <= c_view2, ,
-            drop = FALSE
-          ]
+          df_line <- df_line |>
+            dplyr::filter(
+              row >= r_view1, row <= r_view2,
+              col >= c_view1, col <= c_view2
+            )
 
           if (nrow(df_line) > 0L) {
             p <- p + geom_point(
@@ -837,6 +837,7 @@ server <- function(input, output, session) {
       }
     }
 
+    # ALBS box overlay
     if (isTRUE(gr$albsDone) &&
       !is.na(gr$albsLat) &&
       !is.na(gr$albsLong) &&
@@ -862,6 +863,45 @@ server <- function(input, output, session) {
       )
     }
 
+    # Previous drops markers (toggleable, separate from debug overlay)
+    if (isTRUE(input$showDropMarkers)) {
+      lg <- gr$log
+      if (!is.null(lg) && is.data.frame(lg) && nrow(lg) > 0L) {
+        drops <- lg |>
+          dplyr::filter(!is.na(action), action == "Drop") |>
+          dplyr::select(long, lat, outcome) |>
+          dplyr::filter(!is.na(long), !is.na(lat)) |>
+          dplyr::mutate(
+            long = as.integer(long),
+            lat = as.integer(lat),
+            col = dplyr::case_when(
+              !is.null(outcome) & !is.na(outcome) & outcome == "hit" ~ col_hit,
+              !is.null(outcome) & !is.na(outcome) & outcome == "miss" ~ col_miss,
+              TRUE ~ col_tested
+            )
+          ) |>
+          dplyr::distinct(long, lat, .keep_all = TRUE) |>
+          dplyr::filter(
+            lat >= r_view1, lat <= r_view2,
+            long >= c_view1, long <= c_view2
+          )
+
+        if (nrow(drops) > 0L) {
+          p <- p +
+            geom_point(
+              data = drops,
+              inherit.aes = FALSE,
+              aes(x = long, y = lat, color = col),
+              shape = 4, # cross
+              size = 2.2,
+              stroke = 0.9
+            ) +
+            scale_color_identity(guide = "none")
+        }
+      }
+    }
+
+    # Suggested next drop marker (kept on top)
     s <- suggestion()
     if (!is.null(s)) {
       p <- p + annotate(
@@ -876,6 +916,7 @@ server <- function(input, output, session) {
       )
     }
 
+    # Pending center footprint (dashed outline)
     pending_center <- NULL
     cx_input <- suppressWarnings(as.integer(input$dropLong))
     cy_input <- suppressWarnings(as.integer(input$dropLat))

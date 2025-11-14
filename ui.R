@@ -227,8 +227,8 @@ ui <- navbarPage(
           h4("Grid colors"),
           textInput("colPossible", "Untested / possible cells", value = ""),
           textInput("colTested", "Tested cells", value = ""),
-          textInput("colHit", "Remaining candidates after hit / debug line", value = ""),
-          textInput("colMiss", "Miss footprint", value = ""),
+          textInput("colHit", "Remaining candidates after hit / hit markers / debug line", value = ""),
+          textInput("colMiss", "Miss markers", value = ""),
           textInput("colSuggestion", "Suggested drop center / outline", value = ""),
           textInput("colALBS", "ALBS window outline", value = ""),
           textInput("colImpossible", "Impossible / excluded area", value = ""),
@@ -252,7 +252,8 @@ ui <- navbarPage(
           checkboxInput("preferNoOverlap", "Prefer drops with no overlap", value = TRUE),
           checkboxInput("allowPartial", "Allow partial coverage at edges", value = TRUE),
           checkboxInput("wrapRows", "Wrap search when end of row reached", value = TRUE),
-          checkboxInput("debugOverlay", "Show debug overlay (constraints & candidates)", value = FALSE)
+          checkboxInput("debugOverlay", "Show debug overlay (constraints & candidates)", value = FALSE),
+          checkboxInput("showDropMarkers", "Show markers for previous drops", value = TRUE),
         )
       ),
       column(
