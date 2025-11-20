@@ -1,7 +1,7 @@
 ui <- navbarPage(
   title = "Anomaly Tracker",
   id = "mainNav",
-  theme = light_theme, # NEW: start light; server switches at runtime if needed
+  theme = light_theme, # start light; server switches at runtime if needed
   header = tags$head(
     tags$style(HTML("
       h3, h4 {
@@ -31,7 +31,13 @@ ui <- navbarPage(
         min-height: 48px;
         padding-top: 10px;
         padding-bottom: 10px;
+        /* NEW: allow labels to wrap and break if needed */
+        white-space: normal;
+        overflow-wrap: anywhere;
       }
+
+      /* NEW: Make Shiny plot backgrounds transparent so the theme shows through */
+      #gridPlot, .shiny-plot-output { background: transparent !important; }
     "))
   ),
   tabPanel(
@@ -238,7 +244,7 @@ ui <- navbarPage(
           checkboxInput("debugOverlay", "Show debug overlay (constraints & candidates)", value = FALSE),
           checkboxInput("showDropMarkers", "Show markers for previous drops", value = TRUE),
           tags$hr(),
-          checkboxInput("darkMode", "Dark mode", value = FALSE) # NEW: theme toggle
+          checkboxInput("darkMode", "Dark mode", value = FALSE)
         )
       ),
       column(
