@@ -1,8 +1,15 @@
 # install_packages.R
 # Helper script to install all required packages for the Anomaly Tracker app.
 
+# Use a reliable CRAN mirror if none is set
+if (is.null(getOption("repos")) || is.na(getOption("repos")["CRAN"]) || getOption("repos")["CRAN"] == "@CRAN@") {
+  options(repos = c(CRAN = "https://cloud.r-project.org"))
+}
+
 required_packages <- c(
   "shiny",
+  "bslib", # theming (light/dark)
+  "thematic", # auto-apply theme to plots
   "dplyr",
   "purrr",
   "tibble",
