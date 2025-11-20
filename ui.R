@@ -31,10 +31,11 @@ ui <- navbarPage(
         min-height: 48px;
         padding-top: 10px;
         padding-bottom: 10px;
-        /* UPDATED: allow wrapping between words, but never mid-word */
-        white-space: normal;
-        overflow-wrap: break-word;
-        word-break: normal;
+        /* UPDATED: keep words intact; wrap only at spaces */
+        white-space: normal !important;  /* override Bootstrap's nowrap */
+        overflow-wrap: normal;           /* don't break within words */
+        word-break: keep-all;            /* prevent mid-word breaks */
+        hyphens: none;                   /* no auto hyphenation */
       }
 
       /* Ensure Shiny plot containers and the rendered <img> are transparent */
