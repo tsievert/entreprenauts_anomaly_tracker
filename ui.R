@@ -1,8 +1,7 @@
-## -------- ui.R --------
-
 ui <- navbarPage(
   title = "Anomaly Tracker",
   id = "mainNav",
+  theme = light_theme, # NEW: start light; server switches at runtime if needed
   header = tags$head(
     tags$style(HTML("
       h3, h4 {
@@ -157,28 +156,12 @@ ui <- navbarPage(
         wellPanel(
           h4("Create / delete grids"),
           textInput("newGridID", "New grid ID", value = "gridA"),
-          numericInput(
-            "newGridCols",
-            "Columns / Long (X)",
-            value = 50,
-            min   = 5,
-            step  = 1
-          ),
-          numericInput(
-            "newGridRows",
-            "Rows / Lat (Y)",
-            value = 50,
-            min   = 5,
-            step  = 1
-          ),
+          numericInput("newGridRows", "Rows / Lat (Y)", value = 50, min = 5, step = 1),
+          numericInput("newGridCols", "Columns / Long (X)", value = 50, min = 5, step = 1),
           actionButton("createGrid", "Add grid"),
           hr(),
           selectInput("deleteGridID", "Grid to delete", choices = character(0)),
-          actionButton(
-            "deleteGrid",
-            "Delete selected grid",
-            class = "btn-danger btn-block btn-wrap"
-          )
+          actionButton("deleteGrid", "Delete selected grid", class = "btn-danger btn-block btn-wrap")
         ),
         wellPanel(
           h4("Import / export"),
@@ -254,6 +237,8 @@ ui <- navbarPage(
           checkboxInput("wrapRows", "Wrap search when end of row reached", value = TRUE),
           checkboxInput("debugOverlay", "Show debug overlay (constraints & candidates)", value = FALSE),
           checkboxInput("showDropMarkers", "Show markers for previous drops", value = TRUE),
+          tags$hr(),
+          checkboxInput("darkMode", "Dark mode", value = FALSE) # NEW: theme toggle
         )
       ),
       column(

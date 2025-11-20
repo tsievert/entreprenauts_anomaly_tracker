@@ -1,6 +1,11 @@
 ### ------ server.R -----------
 
 server <- function(input, output, session) {
+  # ---------- Enable auto plot theming ----------
+  if (requireNamespace("thematic", quietly = TRUE)) {
+    thematic::thematic_shiny()
+  }
+
   # ---------- Initial state (from RDS or defaults) ----------
 
   state <- loadState()
@@ -13,6 +18,7 @@ server <- function(input, output, session) {
   grids0 <- list()
   radii0 <- default_radii
   color0 <- normalize_color_state(if (!is.null(state)) state$color_state else NULL)
+  dark0 <- if (!is.null(state) && !is.null(state$darkMode)) isTRUE(state$darkMode) else FALSE
 
   if (!is.null(state)) {
     if (!is.null(state$radiiDF)) radii0 <- state$radiiDF
@@ -32,7 +38,30 @@ server <- function(input, output, session) {
   rv <- reactiveValues(
     grids       = grids0,
     radiiDF     = radii0,
-    color_state = color0
+    color_state = color0,
+    darkMode    = dark0 # NEW: persisted theme preference
+  )
+
+  # ---------- Theme initialization ----------
+  observeEvent(TRUE,
+    {
+      session$setCurrentTheme(if (isTRUE(rv$darkMode)) dark_theme else light_theme)
+    },
+    once = TRUE
+  )
+
+  # Reflect persisted setting to UI on load
+  observe({
+    updateCheckboxInput(session, "darkMode", value = isTRUE(rv$darkMode))
+  })
+
+  # Switch theme when toggled
+  observeEvent(input$darkMode,
+    {
+      rv$darkMode <- isTRUE(input$darkMode)
+      session$setCurrentTheme(if (rv$darkMode) dark_theme else light_theme)
+    },
+    ignoreInit = TRUE
   )
 
   # ---------- Helpers ----------
@@ -341,6 +370,8 @@ server <- function(input, output, session) {
     }
     rv$radiiDF <- saved$radiiDF %||% rv$radiiDF
     rv$color_state <- normalize_color_state(saved$color_state %||% rv$color_state)
+    rv$darkMode <- isTRUE(saved$darkMode) # NEW: import dark mode
+    session$setCurrentTheme(if (rv$darkMode) dark_theme else light_theme)
     showNotification("State imported.", type = "message")
   })
 

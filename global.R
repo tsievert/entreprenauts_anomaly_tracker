@@ -1,5 +1,3 @@
-## -------- global.R --------
-
 suppressPackageStartupMessages({
   library(shiny)
   library(dplyr)
@@ -10,12 +8,18 @@ suppressPackageStartupMessages({
   library(shinyBS)
   library(shinyvalidate)
   library(ggplot2)
+  library(bslib) # NEW: theming runtime + Bootswatch
+  library(thematic) # NEW: auto-theming for ggplot
 })
 
 # Optional: enable reactlog during development
 if (requireNamespace("reactlog", quietly = TRUE)) {
   try(reactlog::reactlog_enable(), silent = TRUE)
 }
+
+# ---------- App-wide themes (Bootstrap v3 to keep shinyBS styling consistent) ----------
+light_theme <- bslib::bs_theme(version = 3, bootswatch = "flatly")
+dark_theme <- bslib::bs_theme(version = 3, bootswatch = "darkly")
 
 # ---------- Small utils ----------
 
@@ -233,7 +237,8 @@ saveState <- function(file = STATE_FILE, rv) {
   saved <- list(
     grids       = rv$grids,
     radiiDF     = rv$radiiDF,
-    color_state = rv$color_state
+    color_state = rv$color_state,
+    darkMode    = rv$darkMode %||% FALSE # NEW: persist dark mode preference
   )
   saveRDS(saved, file)
 }
@@ -343,7 +348,7 @@ y_to_row <- function(y, nr) {
   as.integer(round(y))
 }
 
-# ---------- Direction helpers (radius-limited line / square regions) ----------
+# ---------- Direction helpers (radius-limited line) ----------
 
 direction_line_mask <- function(nr, nc, cx, cy, dir, R) {
   if (is.null(dir) || is.na(dir) || !nzchar(dir)) {
@@ -363,7 +368,7 @@ direction_line_mask <- function(nr, nc, cx, cy, dir, R) {
   d <- toupper(as.character(dir[[1L]]))
   mask <- matrix(FALSE, nrow = nr, ncol = nc)
 
-  # BELOW: only the drop cell itself remains possible
+  # BELOW: only the drop cell itself
   if (identical(d, "BELOW")) {
     mask[cy, cx] <- TRUE
     return(mask)
@@ -374,80 +379,55 @@ direction_line_mask <- function(nr, nc, cx, cy, dir, R) {
     return(NULL)
   }
 
-  # Helper: safe clamp to grid
-  clamp_row <- function(lo, hi) {
-    lo <- max(1L, lo)
-    hi <- min(nr, hi)
-    list(lo = lo, hi = hi)
-  }
-
-  clamp_col <- function(lo, hi) {
-    lo <- max(1L, lo)
-    hi <- min(nc, hi)
-    list(lo = lo, hi = hi)
-  }
-
-  steps <- seq_len(R)
-
-  # Cardinal directions: keep the existing 1-cell wide line behaviour
+  # --- full-square wedges (N, S, E, W, and diagonals expanded to square sectors) ---
   if (identical(d, "N")) {
-    for (k in steps) {
-      r <- cy - k
-      c <- cx
-      if (r < 1L) break
-      mask[r, c] <- TRUE
-    }
+    r1 <- max(1L, cy - R)
+    r2 <- cy
+    c1 <- max(1L, cx - R)
+    c2 <- min(nc, cx + R)
+    if (r1 <= r2) mask[r1:r2, c1:c2] <- TRUE
   } else if (identical(d, "S")) {
-    for (k in steps) {
-      r <- cy + k
-      c <- cx
-      if (r > nr) break
-      mask[r, c] <- TRUE
-    }
+    r1 <- cy
+    r2 <- min(nr, cy + R)
+    c1 <- max(1L, cx - R)
+    c2 <- min(nc, cx + R)
+    if (r1 <= r2) mask[r1:r2, c1:c2] <- TRUE
   } else if (identical(d, "E")) {
-    for (k in steps) {
-      r <- cy
-      c <- cx + k
-      if (c > nc) break
-      mask[r, c] <- TRUE
-    }
+    r1 <- max(1L, cy - R)
+    r2 <- min(nr, cy + R)
+    c1 <- cx
+    c2 <- min(nc, cx + R)
+    if (c1 <= c2) mask[r1:r2, c1:c2] <- TRUE
   } else if (identical(d, "W")) {
-    for (k in steps) {
-      r <- cy
-      c <- cx - k
-      if (c < 1L) break
-      mask[r, c] <- TRUE
-    }
-
-    # Diagonals: square regions between the two cardinals
-  } else if (identical(d, "SE")) {
-    # Rows strictly south, columns strictly east: (cy+1..cy+R, cx+1..cx+R)
-    rr <- clamp_row(cy + 1L, cy + R)
-    cc <- clamp_col(cx + 1L, cx + R)
-    if (rr$lo <= rr$hi && cc$lo <= cc$hi) {
-      mask[rr$lo:rr$hi, cc$lo:cc$hi] <- TRUE
-    }
-  } else if (identical(d, "SW")) {
-    # Rows strictly south, columns strictly west: (cy+1..cy+R, cx-R..cx-1)
-    rr <- clamp_row(cy + 1L, cy + R)
-    cc <- clamp_col(cx - R, cx - 1L)
-    if (rr$lo <= rr$hi && cc$lo <= cc$hi) {
-      mask[rr$lo:rr$hi, cc$lo:cc$hi] <- TRUE
-    }
+    r1 <- max(1L, cy - R)
+    r2 <- min(nr, cy + R)
+    c1 <- max(1L, cx - R)
+    c2 <- cx
+    if (c1 <= c2) mask[r1:r2, c1:c2] <- TRUE
   } else if (identical(d, "NE")) {
-    # Rows strictly north, columns strictly east: (cy-R..cy-1, cx+1..cx+R)
-    rr <- clamp_row(cy - R, cy - 1L)
-    cc <- clamp_col(cx + 1L, cx + R)
-    if (rr$lo <= rr$hi && cc$lo <= cc$hi) {
-      mask[rr$lo:rr$hi, cc$lo:cc$hi] <- TRUE
-    }
+    r1 <- max(1L, cy - R)
+    r2 <- cy
+    c1 <- cx
+    c2 <- min(nc, cx + R)
+    if (r1 <= r2 && c1 <= c2) mask[r1:r2, c1:c2] <- TRUE
   } else if (identical(d, "NW")) {
-    # Rows strictly north, columns strictly west: (cy-R..cy-1, cx-R..cx-1)
-    rr <- clamp_row(cy - R, cy - 1L)
-    cc <- clamp_col(cx - R, cx - 1L)
-    if (rr$lo <= rr$hi && cc$lo <= cc$hi) {
-      mask[rr$lo:rr$hi, cc$lo:cc$hi] <- TRUE
-    }
+    r1 <- max(1L, cy - R)
+    r2 <- cy
+    c1 <- max(1L, cx - R)
+    c2 <- cx
+    if (r1 <= r2 && c1 <= c2) mask[r1:r2, c1:c2] <- TRUE
+  } else if (identical(d, "SE")) {
+    r1 <- cy
+    r2 <- min(nr, cy + R)
+    c1 <- cx
+    c2 <- min(nc, cx + R)
+    if (r1 <= r2 && c1 <= c2) mask[r1:r2, c1:c2] <- TRUE
+  } else if (identical(d, "SW")) {
+    r1 <- cy
+    r2 <- min(nr, cy + R)
+    c1 <- max(1L, cx - R)
+    c2 <- cx
+    if (r1 <= r2 && c1 <= c2) mask[r1:r2, c1:c2] <- TRUE
   } else {
     return(NULL)
   }
