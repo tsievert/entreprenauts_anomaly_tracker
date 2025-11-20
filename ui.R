@@ -31,13 +31,15 @@ ui <- navbarPage(
         min-height: 48px;
         padding-top: 10px;
         padding-bottom: 10px;
-        /* NEW: allow labels to wrap and break if needed */
+        /* UPDATED: allow wrapping between words, but never mid-word */
         white-space: normal;
-        overflow-wrap: anywhere;
+        overflow-wrap: break-word;
+        word-break: normal;
       }
 
-      /* NEW: Make Shiny plot backgrounds transparent so the theme shows through */
+      /* Ensure Shiny plot containers and the rendered <img> are transparent */
       #gridPlot, .shiny-plot-output { background: transparent !important; }
+      .shiny-plot-output img { background: transparent !important; }
     "))
   ),
   tabPanel(
