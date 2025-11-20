@@ -1,3 +1,5 @@
+## -------- ui.R --------
+
 ui <- navbarPage(
   title = "Anomaly Tracker",
   id = "mainNav",
@@ -31,7 +33,7 @@ ui <- navbarPage(
         min-height: 48px;
         padding-top: 10px;
         padding-bottom: 10px;
-        /* UPDATED: keep words intact; wrap only at spaces */
+        /* keep words intact; wrap only at spaces */
         white-space: normal !important;  /* override Bootstrap's nowrap */
         overflow-wrap: normal;           /* don't break within words */
         word-break: keep-all;            /* prevent mid-word breaks */
@@ -41,6 +43,66 @@ ui <- navbarPage(
       /* Ensure Shiny plot containers and the rendered <img> are transparent */
       #gridPlot, .shiny-plot-output { background: transparent !important; }
       .shiny-plot-output img { background: transparent !important; }
+
+      /* =========================
+         Selectize theming (selectInput)
+         ========================= */
+
+      /* Collapsed box (displayed value) */
+      .selectize-control .selectize-input,
+      .selectize-control .selectize-input.focus,
+      .selectize-control.single .selectize-input.dropdown-active {
+        background-color: var(--bs-body-bg) !important;
+        color: var(--bs-body-color) !important;
+        border-color: var(--bs-border-color, #495057) !important;
+      }
+      .selectize-control .selectize-input .item,
+      .selectize-control .selectize-input input {
+        color: var(--bs-body-color) !important;
+      }
+      .selectize-control.single .selectize-input::after {
+        border-color: var(--bs-body-color) transparent transparent transparent !important;
+      }
+
+      /* OPEN DROPDOWN PANEL
+         Force an opaque background using theme-scoped rules so it never renders transparent. */
+      html[data-bs-theme='dark'] .selectize-dropdown,
+      html[data-bs-theme='dark'] .selectize-dropdown .selectize-dropdown-content,
+      html[data-bs-theme='dark'] .selectize-dropdown .optgroup,
+      html[data-bs-theme='dark'] .selectize-dropdown .optgroup-header,
+      html[data-bs-theme='dark'] .selectize-dropdown .option {
+        background: #111 !important;   /* opaque dark */
+        color: #eaeaea !important;
+      }
+      html[data-bs-theme='light'] .selectize-dropdown,
+      html[data-bs-theme='light'] .selectize-dropdown .selectize-dropdown-content,
+      html[data-bs-theme='light'] .selectize-dropdown .optgroup,
+      html[data-bs-theme='light'] .selectize-dropdown .optgroup-header,
+      html[data-bs-theme='light'] .selectize-dropdown .option {
+        background: #ffffff !important; /* opaque light */
+        color: #212529 !important;
+      }
+
+      /* Panel chrome: border, shadow, stacking */
+      .selectize-dropdown {
+        border: 1px solid var(--bs-border-color, #495057) !important;
+        box-shadow: 0 6px 18px rgba(0,0,0,0.28) !important;
+        z-index: 2000 !important; /* stay above content */
+      }
+
+      /* Active/hover option */
+      html[data-bs-theme='dark'] .selectize-dropdown .option.active,
+      html[data-bs-theme='dark'] .selectize-dropdown .option.selected,
+      html[data-bs-theme='dark'] .selectize-dropdown .option:hover {
+        background: rgba(255,255,255,0.08) !important;
+        color: #eaeaea !important;
+      }
+      html[data-bs-theme='light'] .selectize-dropdown .option.active,
+      html[data-bs-theme='light'] .selectize-dropdown .option.selected,
+      html[data-bs-theme='light'] .selectize-dropdown .option:hover {
+        background: #f2f2f2 !important;
+        color: #212529 !important;
+      }
     "))
   ),
   tabPanel(
