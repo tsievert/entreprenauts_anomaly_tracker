@@ -1,3 +1,5 @@
+## -------- global.R --------
+
 suppressPackageStartupMessages({
   library(shiny)
   library(dplyr)
@@ -348,7 +350,7 @@ y_to_row <- function(y, nr) {
   as.integer(round(y))
 }
 
-# ---------- Direction helpers (radius-limited line) ----------
+# ---------- Direction helpers (radius-limited line / sector) ----------
 
 direction_line_mask <- function(nr, nc, cx, cy, dir, R) {
   if (is.null(dir) || is.na(dir) || !nzchar(dir)) {
@@ -379,60 +381,75 @@ direction_line_mask <- function(nr, nc, cx, cy, dir, R) {
     return(NULL)
   }
 
-  # --- full-square wedges (N, S, E, W, and diagonals expanded to square sectors) ---
+  # --- full-square sectors for cardinals (unchanged) ---
   if (identical(d, "N")) {
     r1 <- max(1L, cy - R)
     r2 <- cy
     c1 <- max(1L, cx - R)
     c2 <- min(nc, cx + R)
     if (r1 <= r2) mask[r1:r2, c1:c2] <- TRUE
-  } else if (identical(d, "S")) {
+    return(mask)
+  }
+  if (identical(d, "S")) {
     r1 <- cy
     r2 <- min(nr, cy + R)
     c1 <- max(1L, cx - R)
     c2 <- min(nc, cx + R)
     if (r1 <= r2) mask[r1:r2, c1:c2] <- TRUE
-  } else if (identical(d, "E")) {
+    return(mask)
+  }
+  if (identical(d, "E")) {
     r1 <- max(1L, cy - R)
     r2 <- min(nr, cy + R)
     c1 <- cx
     c2 <- min(nc, cx + R)
     if (c1 <= c2) mask[r1:r2, c1:c2] <- TRUE
-  } else if (identical(d, "W")) {
+    return(mask)
+  }
+  if (identical(d, "W")) {
     r1 <- max(1L, cy - R)
     r2 <- min(nr, cy + R)
     c1 <- max(1L, cx - R)
     c2 <- cx
     if (c1 <= c2) mask[r1:r2, c1:c2] <- TRUE
-  } else if (identical(d, "NE")) {
-    r1 <- max(1L, cy - R)
-    r2 <- cy
-    c1 <- cx
-    c2 <- min(nc, cx + R)
-    if (r1 <= r2 && c1 <= c2) mask[r1:r2, c1:c2] <- TRUE
-  } else if (identical(d, "NW")) {
-    r1 <- max(1L, cy - R)
-    r2 <- cy
-    c1 <- max(1L, cx - R)
-    c2 <- cx
-    if (r1 <= r2 && c1 <= c2) mask[r1:r2, c1:c2] <- TRUE
-  } else if (identical(d, "SE")) {
-    r1 <- cy
-    r2 <- min(nr, cy + R)
-    c1 <- cx
-    c2 <- min(nc, cx + R)
-    if (r1 <= r2 && c1 <= c2) mask[r1:r2, c1:c2] <- TRUE
-  } else if (identical(d, "SW")) {
-    r1 <- cy
-    r2 <- min(nr, cy + R)
-    c1 <- max(1L, cx - R)
-    c2 <- cx
-    if (r1 <= r2 && c1 <= c2) mask[r1:r2, c1:c2] <- TRUE
-  } else {
-    return(NULL)
+    return(mask)
   }
 
-  mask
+  # --- diagonals: strict open quadrant (exclude center and axes) ---
+  if (identical(d, "NE")) {
+    r1 <- max(1L, cy - R)
+    r2 <- cy - 1L
+    c1 <- cx + 1L
+    c2 <- min(nc, cx + R)
+    if (r1 <= r2 && c1 <= c2) mask[r1:r2, c1:c2] <- TRUE
+    return(mask)
+  }
+  if (identical(d, "NW")) {
+    r1 <- max(1L, cy - R)
+    r2 <- cy - 1L
+    c1 <- max(1L, cx - R)
+    c2 <- cx - 1L
+    if (r1 <= r2 && c1 <= c2) mask[r1:r2, c1:c2] <- TRUE
+    return(mask)
+  }
+  if (identical(d, "SE")) {
+    r1 <- cy + 1L
+    r2 <- min(nr, cy + R)
+    c1 <- cx + 1L
+    c2 <- min(nc, cx + R)
+    if (r1 <= r2 && c1 <= c2) mask[r1:r2, c1:c2] <- TRUE
+    return(mask)
+  }
+  if (identical(d, "SW")) {
+    r1 <- cy + 1L
+    r2 <- min(nr, cy + R)
+    c1 <- max(1L, cx - R)
+    c2 <- cx - 1L
+    if (r1 <= r2 && c1 <= c2) mask[r1:r2, c1:c2] <- TRUE
+    return(mask)
+  }
+
+  NULL
 }
 
 constrain_grid_by_direction <- function(gr, cx, cy, dir, R) {
