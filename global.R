@@ -381,37 +381,29 @@ direction_line_mask <- function(nr, nc, cx, cy, dir, R) {
     return(NULL)
   }
 
-  # --- full-square sectors for cardinals (unchanged) ---
+  # --- axis-only sectors for cardinals (exclude center) ---
   if (identical(d, "N")) {
     r1 <- max(1L, cy - R)
-    r2 <- cy
-    c1 <- max(1L, cx - R)
-    c2 <- min(nc, cx + R)
-    if (r1 <= r2) mask[r1:r2, c1:c2] <- TRUE
+    r2 <- cy - 1L
+    if (r1 <= r2) mask[r1:r2, cx] <- TRUE
     return(mask)
   }
   if (identical(d, "S")) {
-    r1 <- cy
+    r1 <- cy + 1L
     r2 <- min(nr, cy + R)
-    c1 <- max(1L, cx - R)
-    c2 <- min(nc, cx + R)
-    if (r1 <= r2) mask[r1:r2, c1:c2] <- TRUE
+    if (r1 <= r2) mask[r1:r2, cx] <- TRUE
     return(mask)
   }
   if (identical(d, "E")) {
-    r1 <- max(1L, cy - R)
-    r2 <- min(nr, cy + R)
-    c1 <- cx
+    c1 <- cx + 1L
     c2 <- min(nc, cx + R)
-    if (c1 <= c2) mask[r1:r2, c1:c2] <- TRUE
+    if (c1 <= c2) mask[cy, c1:c2] <- TRUE
     return(mask)
   }
   if (identical(d, "W")) {
-    r1 <- max(1L, cy - R)
-    r2 <- min(nr, cy + R)
     c1 <- max(1L, cx - R)
-    c2 <- cx
-    if (c1 <= c2) mask[r1:r2, c1:c2] <- TRUE
+    c2 <- cx - 1L
+    if (c1 <= c2) mask[cy, c1:c2] <- TRUE
     return(mask)
   }
 
