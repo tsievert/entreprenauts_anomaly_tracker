@@ -760,6 +760,57 @@ apply_drop_window <- function(gr, rows, cols, line_mask = NULL) {
 
 # ---------- Suggestion logic (pure function) ----------
 
+generate_lawnmower_candidates <- function(nr, nc, radius) {
+  nr <- as.integer(nr)
+  nc <- as.integer(nc)
+  radius <- as.integer(radius)
+
+  if (is.na(nr) || is.na(nc) || nr < 1L || nc < 1L) {
+    return(list(rows = integer(), cols = integer(), centers = data.frame()))
+  }
+
+  step <- 2L * radius + 1L
+  if (is.na(step) || step < 1L) {
+    step <- 1L
+  }
+
+  row_positions <- seq.int(1L, nr, by = step)
+  col_positions <- seq.int(1L, nc, by = step)
+
+  centers <- vector("list", length(row_positions) * length(col_positions))
+  idx <- 1L
+  for (i in seq_along(row_positions)) {
+    cy <- row_positions[[i]]
+    cols <- if (i %% 2L == 1L) col_positions else rev(col_positions)
+    for (j in seq_along(cols)) {
+      centers[[idx]] <- list(
+        lat = cy,
+        long = cols[[j]],
+        row_idx = i,
+        col_idx = j
+      )
+      idx <- idx + 1L
+    }
+  }
+
+  centers_df <- if (length(centers)) {
+    data.frame(
+      lat = vapply(centers, `[[`, integer(1L), "lat"),
+      long = vapply(centers, `[[`, integer(1L), "long"),
+      row_idx = vapply(centers, `[[`, integer(1L), "row_idx"),
+      col_idx = vapply(centers, `[[`, integer(1L), "col_idx")
+    )
+  } else {
+    data.frame()
+  }
+
+  list(
+    rows = row_positions,
+    cols = col_positions,
+    centers = centers_df
+  )
+}
+
 last_manual_drop <- function(gr) {
   lg <- gr$log
   if (is.null(lg) || !is.data.frame(lg) || nrow(lg) == 0L) {
@@ -822,8 +873,7 @@ suggest_next_center <- function(
   sat_untested <- build_sat(untested)
   sat_tested <- build_sat(tested_possible)
 
-  step <- 2L * R + 1L
-  if (step < 1L) step <- 1L
+  lawnmower <- generate_lawnmower_candidates(nr, nc, R)
 
   last <- last_manual
   last_lat <- NA_integer_
@@ -863,8 +913,10 @@ suggest_next_center <- function(
     return(NULL)
   }
 
-  row_positions <- seq.int(r_min, r_max, by = step)
-  col_positions <- seq.int(c_min, c_max, by = step)
+  row_positions <- lawnmower$rows
+  col_positions <- lawnmower$cols
+  row_positions <- row_positions[row_positions >= r_min & row_positions <= r_max]
+  col_positions <- col_positions[col_positions >= c_min & col_positions <= c_max]
 
   if (!length(row_positions) || !length(col_positions)) {
     return(NULL)
@@ -944,8 +996,15 @@ suggest_next_center <- function(
     NULL
   }
 
+  row_idx <- NULL
   if (!is.na(last_lat) && !is.na(last_long)) {
-    row_idx <- which.min(abs(row_positions - last_lat))
+    row_idx <- match(last_lat, row_positions)
+    if (is.na(row_idx)) {
+      row_idx <- NULL
+    }
+  }
+
+  if (!is.null(row_idx)) {
     cols <- if (row_idx %% 2L == 1L) col_positions else rev(col_positions)
 
     if (row_idx %% 2L == 1L) {
