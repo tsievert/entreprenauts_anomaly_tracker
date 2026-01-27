@@ -275,13 +275,7 @@ server <- function(input, output, session) {
 
     updateCheckboxInput(session, "showALBS", value = FALSE)
 
-    remaining_after <- sum(apply_albs_mask(
-      gr$possible,
-      albsDone = gr$albsDone,
-      albsLat = gr$albsLat,
-      albsLong = gr$albsLong,
-      albsRad = gr$albsRad
-    ) & !gr$hitMask)
+    remaining_after <- sum(gr$possible & !gr$hitMask)
     log_event_grid(gid, list(
       grid       = gid,
       action     = "ALBS",
@@ -312,13 +306,7 @@ server <- function(input, output, session) {
     rv$grids[[gid]] <- gr
     updateCheckboxInput(session, "showALBS", value = TRUE)
 
-    remaining_after <- sum(apply_albs_mask(
-      gr$possible,
-      albsDone = gr$albsDone,
-      albsLat = gr$albsLat,
-      albsLong = gr$albsLong,
-      albsRad = gr$albsRad
-    ) & !gr$hitMask)
+    remaining_after <- sum(gr$possible & !gr$hitMask)
     log_event_grid(gid, list(
       grid      = gid,
       action    = "ALBS Clear",
