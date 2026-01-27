@@ -94,13 +94,7 @@ server <- function(input, output, session) {
     if (is.null(gid)) {
       return(NULL)
     }
-    gr <- rv$grids[[gid]]
-    if (is.null(gr)) {
-      return(NULL)
-    }
-    gr <- normalize_grid(gr, id = gid)
-    rv$grids[[gid]] <- gr
-    gr
+    rv$grids[[gid]]
   })
 
   get_current_grid_or_notify <- function(message = "No grid selected.", type = "error") {
@@ -283,7 +277,7 @@ server <- function(input, output, session) {
     gr$albsRad <- rad
 
     gr <- bump_remaining_version(gr)
-    rv$grids[[gid]] <- gr
+    rv$grids[[gid]] <- normalize_grid(gr, id = gid)
 
     updateCheckboxInput(session, "showALBS", value = FALSE)
 
@@ -317,7 +311,7 @@ server <- function(input, output, session) {
     gr$albsRad <- NA_integer_
 
     gr <- bump_remaining_version(gr)
-    rv$grids[[gid]] <- gr
+    rv$grids[[gid]] <- normalize_grid(gr, id = gid)
     updateCheckboxInput(session, "showALBS", value = TRUE)
 
     remaining_after <- get_remaining(gr)
@@ -349,7 +343,8 @@ server <- function(input, output, session) {
       showNotification("Grid ID already exists.", type = "error")
       return()
     }
-    rv$grids[[id]] <- new_grid(id, nr, nc)
+    gr <- new_grid(id, nr, nc)
+    rv$grids[[id]] <- normalize_grid(gr, id = id)
     updateTextInput(session, "newGridID", value = "")
     updateSelectInput(session, "gridID", selected = id)
   })
@@ -418,7 +413,6 @@ server <- function(input, output, session) {
     df <- purrr::map_dfr(
       rv$grids,
       function(gr) {
-        gr <- normalize_grid(gr, id = gr$id %||% NA_character_)
         remaining <- get_remaining(gr)
         tibble::tibble(
           grid   = gr$id,
@@ -1052,7 +1046,6 @@ server <- function(input, output, session) {
 
   log_event_grid <- function(grid_id, row) {
     gr <- rv$grids[[grid_id]]
-    gr <- normalize_grid(gr, id = grid_id)
     lg <- gr$log
     lg2 <- log_event_df(lg, row)
     gr$log <- lg2
@@ -1168,7 +1161,7 @@ server <- function(input, output, session) {
       distanceFromLast = dist_last
     )
 
-    rv$grids[[gid]] <- gr
+    rv$grids[[gid]] <- normalize_grid(gr, id = gid)
     log_event_grid(gid, log_row)
   })
 
@@ -1197,7 +1190,7 @@ server <- function(input, output, session) {
       action = "Reset"
     ))
 
-    rv$grids[[gid]] <- gr
+    rv$grids[[gid]] <- normalize_grid(gr, id = gid)
   })
 
   observeEvent(input$undoDrop, {
@@ -1214,7 +1207,7 @@ server <- function(input, output, session) {
     }
 
     gr <- grid_undo(gr)
-    rv$grids[[gid]] <- gr
+    rv$grids[[gid]] <- normalize_grid(gr, id = gid)
 
     log_event_grid(gid, list(
       grid   = gid,
