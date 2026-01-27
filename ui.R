@@ -21,6 +21,15 @@ ui <- navbarPage(
       .well .form-group {
         margin-bottom: 8px;
       }
+      .numeric-input-common {
+        margin-bottom: 8px;
+      }
+      .numeric-input-common .form-control {
+        width: 100%;
+      }
+      .numeric-input-common label {
+        margin-bottom: 4px;
+      }
       /* tighter gaps + equal-ish height for bottom buttons */
       .drop-button-row .col-sm-4,
       .drop-button-row .col-md-4,
@@ -125,11 +134,19 @@ ui <- navbarPage(
               fluidRow(
                 column(
                   width = 6,
-                  numericInput("dropLong", "Long (X)", value = NA_real_, min = 1)
+                  class = "col-xs-12 col-sm-6",
+                  div(
+                    class = "numeric-input-common",
+                    numericInput("dropLong", "Long (X)", value = NA_real_, min = 1)
+                  )
                 ),
                 column(
                   width = 6,
-                  numericInput("dropLat", "Lat (Y)", value = NA_real_, min = 1)
+                  class = "col-xs-12 col-sm-6",
+                  div(
+                    class = "numeric-input-common",
+                    numericInput("dropLat", "Lat (Y)", value = NA_real_, min = 1)
+                  )
                 )
               ),
               div(
@@ -217,9 +234,38 @@ ui <- navbarPage(
               ),
               conditionalPanel(
                 condition = "input.showALBS",
-                numericInput("albsLong", "ALBS center Long (X)", value = NA_real_, min = 1),
-                numericInput("albsLat", "ALBS center Lat (Y)", value = NA_real_, min = 1),
-                numericInput("albsRadius", "ALBS radius (grid cells)", value = NA_real_, min = 1),
+                fluidRow(
+                  column(
+                    width = 6,
+                    class = "col-xs-12 col-sm-6",
+                    div(
+                      class = "numeric-input-common",
+                      numericInput("albsLong", "ALBS center Long (X)", value = NA_real_, min = 1)
+                    )
+                  ),
+                  column(
+                    width = 6,
+                    class = "col-xs-12 col-sm-6",
+                    div(
+                      class = "numeric-input-common",
+                      numericInput("albsLat", "ALBS center Lat (Y)", value = NA_real_, min = 1)
+                    )
+                  )
+                ),
+                fluidRow(
+                  column(
+                    width = 6,
+                    class = "col-xs-12 col-sm-6",
+                    div(
+                      class = "numeric-input-common",
+                      numericInput("albsRadius", "ALBS radius (grid cells)", value = NA_real_, min = 1)
+                    )
+                  ),
+                  column(
+                    width = 6,
+                    class = "col-xs-12 col-sm-6"
+                  )
+                ),
                 actionButton("applyALBS", "Apply / update ALBS window"),
                 actionButton("clearALBS", "Clear ALBS", class = "btn-link")
               ),
@@ -258,8 +304,24 @@ ui <- navbarPage(
         wellPanel(
           h4("Create grids"),
           textInput("newGridID", "New grid ID", value = "gridA"),
-          numericInput("newGridCols", "Columns / Long (X)", value = 50, min = 5, step = 1),
-          numericInput("newGridRows", "Rows / Lat (Y)", value = 50, min = 5, step = 1),
+          fluidRow(
+            column(
+              width = 6,
+              class = "col-xs-12 col-sm-6",
+              div(
+                class = "numeric-input-common",
+                numericInput("newGridCols", "Columns / Long (X)", value = 50, min = 5, step = 1)
+              )
+            ),
+            column(
+              width = 6,
+              class = "col-xs-12 col-sm-6",
+              div(
+                class = "numeric-input-common",
+                numericInput("newGridRows", "Rows / Lat (Y)", value = 50, min = 5, step = 1)
+              )
+            )
+          ),
           actionButton("createGrid", "Add grid")
         ),
         wellPanel(
