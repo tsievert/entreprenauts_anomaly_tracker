@@ -870,8 +870,17 @@ suggest_next_center <- function(
     return(NULL)
   }
 
-  is_valid_center <- function(cx, cy) {
+  is_valid_center <- function(cx, cy, require_full_albs = FALSE) {
     if (cx < 1L || cx > nc || cy < 1L || cy > nr) {
+      return(FALSE)
+    }
+
+    r1 <- max(1L, cy - R)
+    r2 <- min(nr, cy + R)
+    c1 <- max(1L, cx - R)
+    c2 <- min(nc, cx + R)
+
+    if (r1 > r2 || c1 > c2) {
       return(FALSE)
     }
 
@@ -888,18 +897,13 @@ suggest_next_center <- function(
       c1_albs <- max(1L, albsLong - albsRad)
       c2_albs <- min(nc, albsLong + albsRad)
 
-      if (cy < r1_albs || cy > r2_albs || cx < c1_albs || cx > c2_albs) {
+      if (require_full_albs) {
+        if (r1 < r1_albs || r2 > r2_albs || c1 < c1_albs || c2 > c2_albs) {
+          return(FALSE)
+        }
+      } else if (cy < r1_albs || cy > r2_albs || cx < c1_albs || cx > c2_albs) {
         return(FALSE)
       }
-    }
-
-    r1 <- max(1L, cy - R)
-    r2 <- min(nr, cy + R)
-    c1 <- max(1L, cx - R)
-    c2 <- min(nc, cx + R)
-
-    if (r1 > r2 || c1 > c2) {
-      return(FALSE)
     }
 
     new_cells <- rect_sum(sat_untested, r1, c1, r2, c2)
@@ -917,7 +921,7 @@ suggest_next_center <- function(
     TRUE
   }
 
-  find_in_row <- function(row_idx, start_col_idx = 1L) {
+  find_in_row <- function(row_idx, start_col_idx = 1L, require_full_albs = FALSE) {
     if (row_idx < 1L || row_idx > length(row_positions)) {
       return(NULL)
     }
@@ -932,7 +936,7 @@ suggest_next_center <- function(
 
     for (j in seq.int(start_col_idx, length(cols))) {
       cx <- cols[[j]]
-      if (is_valid_center(cx, cy)) {
+      if (is_valid_center(cx, cy, require_full_albs = require_full_albs)) {
         return(list(lat = cy, long = cx))
       }
     }
@@ -968,33 +972,14 @@ suggest_next_center <- function(
     return(NULL)
   }
 
-  best_row <- NA_integer_
-  best_col <- NA_integer_
-  best_dist <- Inf
-
   for (row_idx in seq_along(row_positions)) {
-    cy <- row_positions[[row_idx]]
-    for (cx in col_positions) {
-      if (is_valid_center(cx, cy)) {
-        dx <- cy - 1L
-        dy <- cx - 1L
-        dist_sq <- dx * dx + dy * dy
-        if (dist_sq < best_dist ||
-          (dist_sq == best_dist &&
-            (is.na(best_row) || cy < best_row || (cy == best_row && cx < best_col)))) {
-          best_dist <- dist_sq
-          best_row <- cy
-          best_col <- cx
-        }
-      }
+    hit <- find_in_row(row_idx, 1L, require_full_albs = TRUE)
+    if (!is.null(hit)) {
+      return(hit)
     }
   }
 
-  if (is.na(best_row) || is.na(best_col)) {
-    return(NULL)
-  }
-
-  list(lat = best_row, long = best_col)
+  NULL
 }
 
 # ---------- Grid helpers ----------
