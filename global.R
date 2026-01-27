@@ -449,6 +449,75 @@ apply_albs_mask <- function(possible,
   possible & mask
 }
 
+# ---------- Remaining cache helpers ----------
+
+ensure_remaining_cache <- function(gr) {
+  if (is.null(gr$remaining_version) || is.na(gr$remaining_version)) {
+    gr$remaining_version <- 0L
+  }
+
+  if (is.null(gr$remaining_cache) || !is.environment(gr$remaining_cache)) {
+    cache <- new.env(parent = emptyenv())
+    if (is.list(gr$remaining_cache)) {
+      if (!is.null(gr$remaining_cache$version)) {
+        cache$version <- gr$remaining_cache$version
+      }
+      if (!is.null(gr$remaining_cache$remaining)) {
+        cache$remaining <- gr$remaining_cache$remaining
+      }
+    }
+    gr$remaining_cache <- cache
+  }
+
+  gr
+}
+
+bump_remaining_version <- function(gr) {
+  gr <- ensure_remaining_cache(gr)
+  gr$remaining_version <- as.integer(gr$remaining_version) + 1L
+  gr
+}
+
+get_remaining <- function(gr) {
+  if (is.null(gr)) {
+    return(0L)
+  }
+
+  gr <- ensure_remaining_cache(gr)
+  cache <- gr$remaining_cache
+  version <- as.integer(gr$remaining_version %||% 0L)
+
+  cached_version <- if (exists("version", envir = cache, inherits = FALSE)) {
+    cache$version
+  } else {
+    NA_integer_
+  }
+  cached_remaining <- if (exists("remaining", envir = cache, inherits = FALSE)) {
+    cache$remaining
+  } else {
+    NA_integer_
+  }
+
+  if (!identical(cached_version, version) || is.na(cached_remaining)) {
+    if (is.null(gr$possible) || !is.matrix(gr$possible) ||
+      is.null(gr$hitMask) || !is.matrix(gr$hitMask)) {
+      cached_remaining <- 0L
+    } else {
+      cached_remaining <- sum(apply_albs_mask(
+        gr$possible,
+        albsDone = gr$albsDone,
+        albsLat = gr$albsLat,
+        albsLong = gr$albsLong,
+        albsRad = gr$albsRad
+      ) & !gr$hitMask)
+    }
+    cache$version <- version
+    cache$remaining <- cached_remaining
+  }
+
+  cached_remaining
+}
+
 # ---------- Direction helpers (radius-limited line / sector) ----------
 
 direction_line_mask <- function(nr, nc, cx, cy, dir, R) {
@@ -791,6 +860,8 @@ apply_drop <- function(gr, cx, cy, R, outcome, dir, radius_name = NA_character_)
     gr <- constrain_grid_by_direction(gr, cx, cy, dir, R)
   }
 
+  gr <- bump_remaining_version(gr)
+
   gr$lastSearch <- list(
     lat        = cy,
     long       = cx,
@@ -831,6 +902,8 @@ new_grid <- function(id, nr, nc) {
     albsLat    = NA_integer_,
     albsLong   = NA_integer_,
     albsRad    = NA_integer_,
+    remaining_version = 0L,
+    remaining_cache = new.env(parent = emptyenv()),
     log        = .new_log_df(),
     history    = list()
   )
@@ -879,6 +952,13 @@ normalize_grid <- function(gr, id = NA_character_) {
     if (is.null(gr[[nm]])) gr[[nm]] <- NA_integer_
   }
 
+  if (is.null(gr$remaining_version) || is.na(gr$remaining_version)) {
+    gr$remaining_version <- 0L
+  }
+  if (is.null(gr$remaining_cache) || !is.environment(gr$remaining_cache)) {
+    gr$remaining_cache <- new.env(parent = emptyenv())
+  }
+
   # log
   if (is.null(gr$log) || !is.data.frame(gr$log)) {
     gr$log <- .new_log_df()
@@ -917,7 +997,8 @@ grid_push_history <- function(gr, max_depth = 50L) {
     albsDone   = gr$albsDone,
     albsLat    = gr$albsLat,
     albsLong   = gr$albsLong,
-    albsRad    = gr$albsRad
+    albsRad    = gr$albsRad,
+    remaining_version = gr$remaining_version
   )
 
   hist <- c(list(snapshot), hist)
@@ -940,7 +1021,7 @@ grid_undo <- function(gr) {
 
   fields <- c(
     "possible", "hitMask", "hasHit", "lastSearch",
-    "albsDone", "albsLat", "albsLong", "albsRad"
+    "albsDone", "albsLat", "albsLong", "albsRad", "remaining_version"
   )
 
   for (nm in fields) {
@@ -949,6 +1030,7 @@ grid_undo <- function(gr) {
     }
   }
 
+  gr$remaining_cache <- new.env(parent = emptyenv())
   gr$history <- rest
   gr
 }

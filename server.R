@@ -282,11 +282,12 @@ server <- function(input, output, session) {
     gr$albsLong <- cx
     gr$albsRad <- rad
 
+    gr <- bump_remaining_version(gr)
     rv$grids[[gid]] <- gr
 
     updateCheckboxInput(session, "showALBS", value = FALSE)
 
-    remaining_after <- sum(gr$possible & !gr$hitMask)
+    remaining_after <- get_remaining(gr)
     log_event_grid(gid, list(
       grid       = gid,
       action     = "ALBS",
@@ -315,10 +316,11 @@ server <- function(input, output, session) {
     gr$albsLong <- NA_integer_
     gr$albsRad <- NA_integer_
 
+    gr <- bump_remaining_version(gr)
     rv$grids[[gid]] <- gr
     updateCheckboxInput(session, "showALBS", value = TRUE)
 
-    remaining_after <- sum(gr$possible & !gr$hitMask)
+    remaining_after <- get_remaining(gr)
     log_event_grid(gid, list(
       grid      = gid,
       action    = "ALBS Clear",
@@ -417,13 +419,7 @@ server <- function(input, output, session) {
       rv$grids,
       function(gr) {
         gr <- normalize_grid(gr, id = gr$id %||% NA_character_)
-        remaining <- sum(apply_albs_mask(
-          gr$possible,
-          albsDone = gr$albsDone,
-          albsLat = gr$albsLat,
-          albsLong = gr$albsLong,
-          albsRad = gr$albsRad
-        ) & !gr$hitMask)
+        remaining <- get_remaining(gr)
         tibble::tibble(
           grid   = gr$id,
           rows   = gr$nr,
@@ -617,13 +613,7 @@ server <- function(input, output, session) {
       return("")
     }
 
-    remaining <- sum(apply_albs_mask(
-      gr$possible,
-      albsDone = gr$albsDone,
-      albsLat = gr$albsLat,
-      albsLong = gr$albsLong,
-      albsRad = gr$albsRad
-    ) & !gr$hitMask)
+    remaining <- get_remaining(gr)
 
     lg <- gr$log
     if (is.null(lg) || !is.data.frame(lg) || nrow(lg) == 0L) {
@@ -664,13 +654,7 @@ server <- function(input, output, session) {
     if (is.null(gr)) {
       return("No grid selected.")
     }
-    remaining <- sum(apply_albs_mask(
-      gr$possible,
-      albsDone = gr$albsDone,
-      albsLat = gr$albsLat,
-      albsLong = gr$albsLong,
-      albsRad = gr$albsRad
-    ) & !gr$hitMask)
+    remaining <- get_remaining(gr)
     sprintf("Remaining candidate cells: %d", remaining)
   })
 
@@ -1134,6 +1118,7 @@ server <- function(input, output, session) {
     gr$albsRad <- NA_integer_
 
     gr$history <- list()
+    gr <- bump_remaining_version(gr)
 
     gr$log <- log_event_df(gr$log, list(
       grid   = gid,
