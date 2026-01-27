@@ -16,7 +16,7 @@ It’s meant as a simple helper tool for players, not an official product.
 >
 > -   This is an **unofficial fan-made helper** for The Entreprenauts.
 >     It is not affiliated with or endorsed by the creators of the
->     game.\
+>     game.
 > -   A large part of this code was generated and refined using
 >     **ChatGPT (OpenAI)** and then adjusted by a human. Use at your own
 >     risk.
@@ -25,15 +25,15 @@ It’s meant as a simple helper tool for players, not an official product.
 
 ## 🔌 Quick start (TL;DR)
 
-0. **Install R and RStudio** (if you haven’t already):  
+1. **Install R and RStudio** (if you haven’t already):  
    You can download RStudio Desktop (which also links to R installation
    instructions) from <https://posit.co/download/rstudio-desktop/>.
 
-1. Double-click the project file (for example
+2. Double-click the project file (for example
    `entreprenauts_anomaly_tracker.Rproj`) to open the folder in
    **RStudio**.
 
-2. In the RStudio **Console**, run:
+3. In the RStudio **Console**, run:
 
    ``` r
    # First time only:
@@ -49,13 +49,14 @@ It’s meant as a simple helper tool for players, not an official product.
    runApp()
    ```
 
-3.  Your browser should open the **Anomaly Tracker** app.
+4.  Your browser should open the **Anomaly Tracker** app.
 
 > ⚠️ **Current limitation**
 >
 > The automatic coordinate suggestions are still a bit buggy.  
-> For the most reliable results, **click directly on the grid** to pick
-> coordinates instead of relying on the suggested position.
+> For the most reliable results, **click directly on the grid** in the
+> **Search** tab to pick coordinates instead of relying on the suggested
+> position.
 
 If all of that works, you can stop reading here and just use the app. 🙂
 
@@ -132,7 +133,8 @@ installing packages one by one.
 
 ## Installing required R packages (easy way)
 
-This project includes a helper script: **`install_packages.R`**.
+This project includes a helper script: **`install_packages.R`**. If you
+already ran the Quick Start steps above, you can skip this section.
 
 1.  Locate the **project file** in this folder, for example:\
     `entreprenauts_anomaly_tracker.Rproj`
@@ -157,7 +159,7 @@ You usually only need to do this once on a given computer.
 
 ## How to start the Shiny app (full version)
 
-Once the packages are installed:
+Once the packages are installed (see Quick Start above):
 
 1.  Open the project by double-clicking the `.Rproj` file (if it’s not
     already open in RStudio).
@@ -214,6 +216,10 @@ The app automatically saves its state to:
 
 -   `my_grids_state.RDS` (in the project folder)
 
+This file is created/updated automatically when the app runs. If you’re
+using Git, it’s best treated as local state rather than a file to
+commit.
+
 You can also:
 
 -   **Export** the current state as an `.RDS` file (from the *Grids*
@@ -230,4 +236,3 @@ If you run into bugs, have questions, or want to suggest improvements:
 -   Open a **GitHub issue** in this repository, or
 -   Reach out on the **The Entreprenauts Discord** and mention the
     Anomaly Tracker helper.
-
