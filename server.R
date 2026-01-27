@@ -266,11 +266,6 @@ server <- function(input, output, session) {
       return()
     }
 
-    if (cx < 1L || cy < 1L || cx > nc || cy > nr) {
-      showNotification("ALBS center must be within grid bounds.", type = "error")
-      return()
-    }
-
     gr$albsDone <- TRUE
     gr$albsLat <- cy
     gr$albsLong <- cx

@@ -377,7 +377,7 @@ apply_albs_mask <- function(possible,
   c2 <- min(nc, albsLong + albsRad)
 
   if (r1 > r2 || c1 > c2) {
-    return(possible)
+    return(possible & FALSE)
   }
 
   mask <- matrix(FALSE, nrow = nr, ncol = nc)
