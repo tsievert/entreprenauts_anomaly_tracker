@@ -830,7 +830,7 @@ last_manual_drop <- function(gr) {
     return(NULL)
   }
 
-  list(lat = lat, long = long)
+  list(long = long, lat = lat)
 }
 
 suggest_next_center <- function(
@@ -990,7 +990,7 @@ suggest_next_center <- function(
     for (j in seq.int(start_col_idx, length(cols))) {
       cx <- cols[[j]]
       if (is_valid_center(gr, cx, cy, R)) {
-        return(list(lat = cy, long = cx))
+        return(list(long = cx, lat = cy))
       }
     }
 
