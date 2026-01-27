@@ -1087,108 +1087,20 @@ server <- function(input, output, session) {
     R <- radius_of(nm)
     if (is.na(R) || R < 0L) R <- 0L
 
-    gr <- grid_push_history(gr)
-
-    nr <- gr$nr
-    nc <- gr$nc
-
-    r1 <- max(1L, cy - R)
-    r2 <- min(nr, cy + R)
-    c1 <- max(1L, cx - R)
-    c2 <- min(nc, cx + R)
-
-    rows <- if (r1 <= r2) seq.int(r1, r2) else integer(0)
-    cols <- if (c1 <= c2) seq.int(c1, c2) else integer(0)
-
-    test_mask <- matrix(FALSE, nrow = nr, ncol = nc)
-    if (length(rows) > 0L && length(cols) > 0L) {
-      test_mask[rows, cols] <- TRUE
-      area_eff <- length(rows) * length(cols)
-    } else {
-      area_eff <- 0L
-    }
-
-    remaining_before <- sum(apply_albs_mask(
-      gr$possible,
-      albsDone = gr$albsDone,
-      albsLat = gr$albsLat,
-      albsLong = gr$albsLong,
-      albsRad = gr$albsRad
-    ) & !gr$hitMask)
-
     outcome <- input$outcome %||% "miss"
     dir <- if (identical(outcome, "hit")) input$pingDirection %||% "" else ""
 
-    if (identical(outcome, "hit") && nzchar(dir)) {
-      line_mask <- direction_line_mask(
-        nr  = nr,
-        nc  = nc,
-        cx  = cx,
-        cy  = cy,
-        dir = dir,
-        R   = R
-      )
-      if (!is.null(line_mask)) {
-        to_mark <- test_mask & !line_mask
-      } else {
-        to_mark <- test_mask
-      }
-    } else {
-      to_mark <- test_mask
-    }
-
-    gr$hitMask[to_mark] <- TRUE
-
-    remaining_after <- sum(apply_albs_mask(
-      gr$possible,
-      albsDone = gr$albsDone,
-      albsLat = gr$albsLat,
-      albsLong = gr$albsLong,
-      albsRad = gr$albsRad
-    ) & !gr$hitMask)
-    cellsChecked <- area_eff
-    ratio <- if (area_eff > 0L) (remaining_before - remaining_after) / area_eff else 0
-
-    if (identical(outcome, "hit")) {
-      gr$hasHit <- TRUE
-    }
-
-    dist_last <- NA_real_
-    if (!is.null(gr$lastSearch)) {
-      dx <- cx - gr$lastSearch$long
-      dy <- cy - gr$lastSearch$lat
-      dist_last <- sqrt(dx * dx + dy * dy)
-    }
-
-    if (identical(outcome, "hit")) {
-      gr <- constrain_grid_by_direction(gr, cx, cy, dir, R)
-    }
-
-    gr$lastSearch <- list(
-      lat  = cy,
-      long = cx,
-      R    = R,
-      dir  = dir
+    result <- apply_drop(
+      gr = gr,
+      cx = cx,
+      cy = cy,
+      R = R,
+      outcome = outcome,
+      dir = dir,
+      radius_name = nm
     )
-
-    rv$grids[[gid]] <- gr
-
-    row <- list(
-      grid             = gid,
-      action           = "Drop",
-      long             = cx,
-      lat              = cy,
-      radiusName       = nm,
-      radiusVal        = R,
-      outcome          = outcome,
-      direction        = dir,
-      stage            = if (ratio >= 1) "FULL" else "PARTIAL",
-      ratio            = ratio,
-      remaining        = remaining_after,
-      cellsChecked     = cellsChecked,
-      distanceFromLast = dist_last
-    )
-    log_event_grid(gid, row)
+    rv$grids[[gid]] <- result$grid
+    log_event_grid(gid, result$log_row)
   })
 
   observeEvent(input$resetGrid, {
