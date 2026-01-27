@@ -529,11 +529,14 @@ server <- function(input, output, session) {
     prefer_no_overlap <- isTRUE(input$preferNoOverlap)
     allow_partial <- isTRUE(input$allowPartial)
 
+    last_manual <- last_manual_drop(gr)
+
     suggest_next_center(
       gr,
       R,
       prefer_no_overlap = prefer_no_overlap,
-      allow_partial     = allow_partial
+      allow_partial     = allow_partial,
+      last_manual       = last_manual
     )
   })
 

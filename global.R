@@ -760,10 +760,33 @@ apply_drop_window <- function(gr, rows, cols, line_mask = NULL) {
 
 # ---------- Suggestion logic (pure function) ----------
 
+last_manual_drop <- function(gr) {
+  lg <- gr$log
+  if (is.null(lg) || !is.data.frame(lg) || nrow(lg) == 0L) {
+    return(NULL)
+  }
+
+  idx <- which(!is.na(lg$action) & lg$action == "Drop" &
+    !is.na(lg$long) & !is.na(lg$lat))
+  if (!length(idx)) {
+    return(NULL)
+  }
+
+  last_idx <- idx[[length(idx)]]
+  long <- suppressWarnings(as.integer(lg$long[[last_idx]]))
+  lat <- suppressWarnings(as.integer(lg$lat[[last_idx]]))
+  if (is.na(long) || is.na(lat)) {
+    return(NULL)
+  }
+
+  list(lat = lat, long = long)
+}
+
 suggest_next_center <- function(
   gr, R,
   prefer_no_overlap = FALSE,
-  allow_partial = TRUE
+  allow_partial = TRUE,
+  last_manual = NULL
 ) {
   nr <- gr$nr
   nc <- gr$nc
@@ -802,7 +825,7 @@ suggest_next_center <- function(
   step <- 2L * R + 1L
   if (step < 1L) step <- 1L
 
-  last <- gr$lastSearch
+  last <- last_manual
   last_lat <- NA_integer_
   last_long <- NA_integer_
   if (!is.null(last)) {
