@@ -922,15 +922,20 @@ suggest_next_center <- function(
     return(NULL)
   }
 
-  is_valid_center <- function(cx, cy, require_full_albs = FALSE) {
+  is_valid_center <- function(gr, cx, cy, radius) {
     if (cx < 1L || cx > nc || cy < 1L || cy > nr) {
       return(FALSE)
     }
 
-    r1 <- max(1L, cy - R)
-    r2 <- min(nr, cy + R)
-    c1 <- max(1L, cx - R)
-    c2 <- min(nc, cx + R)
+    radius <- as.integer(radius)
+    if (is.na(radius) || radius < 0L) {
+      radius <- 0L
+    }
+
+    r1 <- max(1L, cy - radius)
+    r2 <- min(nr, cy + radius)
+    c1 <- max(1L, cx - radius)
+    c2 <- min(nc, cx + radius)
 
     if (r1 > r2 || c1 > c2) {
       return(FALSE)
@@ -949,11 +954,7 @@ suggest_next_center <- function(
       c1_albs <- max(1L, albsLong - albsRad)
       c2_albs <- min(nc, albsLong + albsRad)
 
-      if (require_full_albs) {
-        if (r1 < r1_albs || r2 > r2_albs || c1 < c1_albs || c2 > c2_albs) {
-          return(FALSE)
-        }
-      } else if (cy < r1_albs || cy > r2_albs || cx < c1_albs || cx > c2_albs) {
+      if (r1 < r1_albs || r2 > r2_albs || c1 < c1_albs || c2 > c2_albs) {
         return(FALSE)
       }
     }
@@ -973,7 +974,7 @@ suggest_next_center <- function(
     TRUE
   }
 
-  find_in_row <- function(row_idx, start_col_idx = 1L, require_full_albs = FALSE) {
+  find_in_row <- function(row_idx, start_col_idx = 1L) {
     if (row_idx < 1L || row_idx > length(row_positions)) {
       return(NULL)
     }
@@ -988,7 +989,7 @@ suggest_next_center <- function(
 
     for (j in seq.int(start_col_idx, length(cols))) {
       cx <- cols[[j]]
-      if (is_valid_center(cx, cy, require_full_albs = require_full_albs)) {
+      if (is_valid_center(gr, cx, cy, R)) {
         return(list(lat = cy, long = cx))
       }
     }
@@ -1032,7 +1033,7 @@ suggest_next_center <- function(
   }
 
   for (row_idx in seq_along(row_positions)) {
-    hit <- find_in_row(row_idx, 1L, require_full_albs = TRUE)
+    hit <- find_in_row(row_idx, 1L)
     if (!is.null(hit)) {
       return(hit)
     }
