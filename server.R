@@ -671,6 +671,14 @@ server <- function(input, output, session) {
 
   # ---------- Remaining cells summary ----------
 
+  output$gridDimensions <- renderText({
+    gr <- current_grid()
+    if (is.null(gr)) {
+      return("Grid dimensions: N/A")
+    }
+    sprintf("Grid dimensions: Long (X)=%d, Lat (Y)=%d", gr$nc, gr$nr)
+  })
+
   output$remainingCellsTop <- renderText({
     gr <- current_grid()
     if (is.null(gr)) {

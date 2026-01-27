@@ -202,6 +202,7 @@ ui <- navbarPage(
       column(
         width = 8,
         h4("Search status"),
+        verbatimTextOutput("gridDimensions"),
         verbatimTextOutput("remainingCellsTop"),
         verbatimTextOutput("suggestedDropTop"),
         verbatimTextOutput("constraintSummary"),
@@ -225,12 +226,14 @@ ui <- navbarPage(
       column(
         width = 4,
         wellPanel(
-          h4("Create / delete grids"),
+          h4("Create grids"),
           textInput("newGridID", "New grid ID", value = "gridA"),
-          numericInput("newGridRows", "Rows / Lat (Y)", value = 50, min = 5, step = 1),
           numericInput("newGridCols", "Columns / Long (X)", value = 50, min = 5, step = 1),
-          actionButton("createGrid", "Add grid"),
-          hr(),
+          numericInput("newGridRows", "Rows / Lat (Y)", value = 50, min = 5, step = 1),
+          actionButton("createGrid", "Add grid")
+        ),
+        wellPanel(
+          h4("Delete grids"),
           selectInput("deleteGridID", "Grid to delete", choices = character(0)),
           actionButton("deleteGrid", "Delete selected grid", class = "btn-danger btn-block btn-wrap")
         ),
