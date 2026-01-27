@@ -115,38 +115,48 @@ ui <- navbarPage(
           selectInput("gridID", "Grid", choices = character(0)),
           selectInput("radiusName", "Probe type", choices = character(0)),
           hr(),
-          h4("Drop coordinates"),
-          # Long/Lat side by side, suggestion button full-width below
-          fluidRow(
-            column(
-              width = 6,
-              numericInput("dropLong", "Long (X)", value = NA_real_, min = 1)
+          bsCollapse(
+            id = "dropControls",
+            open = c("drop_coords", "drop_outcome"),
+            bsCollapsePanel(
+              "Drop coordinates",
+              value = "drop_coords",
+              # Long/Lat side by side, suggestion button full-width below
+              fluidRow(
+                column(
+                  width = 6,
+                  numericInput("dropLong", "Long (X)", value = NA_real_, min = 1)
+                ),
+                column(
+                  width = 6,
+                  numericInput("dropLat", "Lat (Y)", value = NA_real_, min = 1)
+                )
+              ),
+              div(
+                style = "margin-top: 10px;",
+                actionButton(
+                  "useSuggestion",
+                  "Use suggested position",
+                  class = "btn-block btn-wrap"
+                )
+              )
             ),
-            column(
-              width = 6,
-              numericInput("dropLat", "Lat (Y)", value = NA_real_, min = 1)
+            bsCollapsePanel(
+              "Outcome",
+              value = "drop_outcome",
+              radioButtons(
+                "outcome",
+                "Result of last drop",
+                choices = c("Miss" = "miss", "Hit" = "hit"),
+                inline = TRUE
+              ),
+              selectInput(
+                "pingDirection",
+                "Hit direction (if hit)",
+                choices = c("N", "NE", "E", "SE", "S", "SW", "W", "NW", "Below"),
+                selected = "N"
+              )
             )
-          ),
-          div(
-            style = "margin-top: 10px;",
-            actionButton(
-              "useSuggestion",
-              "Use suggested position",
-              class = "btn-block btn-wrap"
-            )
-          ),
-          h4("Outcome"),
-          radioButtons(
-            "outcome",
-            "Result of last drop",
-            choices = c("Miss" = "miss", "Hit" = "hit"),
-            inline = TRUE
-          ),
-          selectInput(
-            "pingDirection",
-            "Hit direction (if hit)",
-            choices = c("N", "NE", "E", "SE", "S", "SW", "W", "NW", "Below"),
-            selected = "N"
           ),
           hr(),
           div(
@@ -180,23 +190,30 @@ ui <- navbarPage(
           )
         ),
         wellPanel(
-          h4("ALBS constraints"),
-          checkboxInput("showALBS", "Show ALBS controls", value = TRUE),
-          bsTooltip(
-            "showALBS",
-            title = "Hide ALBS inputs after initial setup to free space. You can always re-open them.",
-            placement = "right",
-            trigger = "hover"
-          ),
-          conditionalPanel(
-            condition = "input.showALBS",
-            numericInput("albsLong", "ALBS center Long (X)", value = NA_real_, min = 1),
-            numericInput("albsLat", "ALBS center Lat (Y)", value = NA_real_, min = 1),
-            numericInput("albsRadius", "ALBS radius (grid cells)", value = NA_real_, min = 1),
-            actionButton("applyALBS", "Apply / update ALBS window"),
-            actionButton("clearALBS", "Clear ALBS", class = "btn-link")
-          ),
-          verbatimTextOutput("albsStatus")
+          bsCollapse(
+            id = "albsControls",
+            open = "albs_constraints",
+            bsCollapsePanel(
+              "ALBS constraints",
+              value = "albs_constraints",
+              checkboxInput("showALBS", "Show ALBS controls", value = TRUE),
+              bsTooltip(
+                "showALBS",
+                title = "Hide ALBS inputs after initial setup to free space. You can always re-open them.",
+                placement = "right",
+                trigger = "hover"
+              ),
+              conditionalPanel(
+                condition = "input.showALBS",
+                numericInput("albsLong", "ALBS center Long (X)", value = NA_real_, min = 1),
+                numericInput("albsLat", "ALBS center Lat (Y)", value = NA_real_, min = 1),
+                numericInput("albsRadius", "ALBS radius (grid cells)", value = NA_real_, min = 1),
+                actionButton("applyALBS", "Apply / update ALBS window"),
+                actionButton("clearALBS", "Clear ALBS", class = "btn-link")
+              ),
+              verbatimTextOutput("albsStatus")
+            )
+          )
         )
       ),
       column(
