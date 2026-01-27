@@ -266,23 +266,10 @@ server <- function(input, output, session) {
       return()
     }
 
-    r1 <- max(1L, cy - rad)
-    r2 <- min(nr, cy + rad)
-    c1 <- max(1L, cx - rad)
-    c2 <- min(nc, cx + rad)
-
-    mask <- matrix(FALSE, nrow = nr, ncol = nc)
-    if (r1 <= r2 && c1 <= c2) {
-      mask[r1:r2, c1:c2] <- TRUE
-    }
-
-    gr$possible <- gr$possible & mask
     gr$albsDone <- TRUE
     gr$albsLat <- cy
     gr$albsLong <- cx
     gr$albsRad <- rad
-
-    gr$hitMask <- gr$hitMask & gr$possible
 
     rv$grids[[gid]] <- gr
 
@@ -417,7 +404,13 @@ server <- function(input, output, session) {
       rv$grids,
       function(gr) {
         gr <- normalize_grid(gr, id = gr$id %||% NA_character_)
-        remaining <- sum(gr$possible & !gr$hitMask)
+        remaining <- sum(apply_albs_mask(
+          gr$possible,
+          albsDone = gr$albsDone,
+          albsLat = gr$albsLat,
+          albsLong = gr$albsLong,
+          albsRad = gr$albsRad
+        ) & !gr$hitMask)
         tibble::tibble(
           grid   = gr$id,
           rows   = gr$nr,
@@ -603,7 +596,13 @@ server <- function(input, output, session) {
       return("Suggested drop: none available")
     }
 
-    mask <- gr$possible & !gr$hitMask
+    mask <- apply_albs_mask(
+      gr$possible,
+      albsDone = gr$albsDone,
+      albsLat = gr$albsLat,
+      albsLong = gr$albsLong,
+      albsRad = gr$albsRad
+    ) & !gr$hitMask
     idx <- which(mask, arr.ind = TRUE)
     n <- nrow(idx)
 
@@ -638,7 +637,13 @@ server <- function(input, output, session) {
       return("")
     }
 
-    remaining <- sum(gr$possible & !gr$hitMask)
+    remaining <- sum(apply_albs_mask(
+      gr$possible,
+      albsDone = gr$albsDone,
+      albsLat = gr$albsLat,
+      albsLong = gr$albsLong,
+      albsRad = gr$albsRad
+    ) & !gr$hitMask)
 
     lg <- gr$log
     if (is.null(lg) || !is.data.frame(lg) || nrow(lg) == 0L) {
@@ -671,7 +676,13 @@ server <- function(input, output, session) {
     if (is.null(gr)) {
       return("No grid selected.")
     }
-    remaining <- sum(gr$possible & !gr$hitMask)
+    remaining <- sum(apply_albs_mask(
+      gr$possible,
+      albsDone = gr$albsDone,
+      albsLat = gr$albsLat,
+      albsLong = gr$albsLong,
+      albsRad = gr$albsRad
+    ) & !gr$hitMask)
     sprintf("Remaining candidate cells: %d", remaining)
   })
 
@@ -680,7 +691,13 @@ server <- function(input, output, session) {
     if (is.null(gr) || !isTRUE(gr$hasHit)) {
       return("")
     }
-    mask <- gr$possible & !gr$hitMask
+    mask <- apply_albs_mask(
+      gr$possible,
+      albsDone = gr$albsDone,
+      albsLat = gr$albsLat,
+      albsLong = gr$albsLong,
+      albsRad = gr$albsRad
+    ) & !gr$hitMask
     idx <- which(mask, arr.ind = TRUE)
     n <- nrow(idx)
     if (n == 0L) {
@@ -769,7 +786,13 @@ server <- function(input, output, session) {
       col_impossible <- safe_color(cs$impossible, cols_def[[7L]])
       col_gridLines <- safe_color(cs$gridLines, cols_def[[8L]])
 
-      possible <- gr$possible
+      possible <- apply_albs_mask(
+        gr$possible,
+        albsDone = gr$albsDone,
+        albsLat = gr$albsLat,
+        albsLong = gr$albsLong,
+        albsRad = gr$albsRad
+      )
       tested <- gr$hitMask
 
       rows <- r_view1:r_view2
@@ -1109,7 +1132,13 @@ server <- function(input, output, session) {
       area_eff <- 0L
     }
 
-    remaining_before <- sum(gr$possible & !gr$hitMask)
+    remaining_before <- sum(apply_albs_mask(
+      gr$possible,
+      albsDone = gr$albsDone,
+      albsLat = gr$albsLat,
+      albsLong = gr$albsLong,
+      albsRad = gr$albsRad
+    ) & !gr$hitMask)
 
     outcome <- input$outcome %||% "miss"
     dir <- if (identical(outcome, "hit")) input$pingDirection %||% "" else ""
@@ -1134,7 +1163,13 @@ server <- function(input, output, session) {
 
     gr$hitMask[to_mark] <- TRUE
 
-    remaining_after <- sum(gr$possible & !gr$hitMask)
+    remaining_after <- sum(apply_albs_mask(
+      gr$possible,
+      albsDone = gr$albsDone,
+      albsLat = gr$albsLat,
+      albsLong = gr$albsLong,
+      albsRad = gr$albsRad
+    ) & !gr$hitMask)
     cellsChecked <- area_eff
     ratio <- if (area_eff > 0L) (remaining_before - remaining_after) / area_eff else 0
 
