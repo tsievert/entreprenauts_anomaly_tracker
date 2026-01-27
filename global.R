@@ -847,7 +847,29 @@ suggest_next_center <- function(
     return(NULL)
   }
 
-  is_valid_center <- function(cy, cx) {
+  is_valid_center <- function(cx, cy) {
+    if (cx < 1L || cx > nc || cy < 1L || cy > nr) {
+      return(FALSE)
+    }
+
+    if (isTRUE(gr$albsDone) &&
+      !is.na(gr$albsLat) &&
+      !is.na(gr$albsLong) &&
+      !is.na(gr$albsRad)) {
+      albsLat <- as.integer(gr$albsLat)
+      albsLong <- as.integer(gr$albsLong)
+      albsRad <- as.integer(gr$albsRad)
+
+      r1_albs <- max(1L, albsLat - albsRad)
+      r2_albs <- min(nr, albsLat + albsRad)
+      c1_albs <- max(1L, albsLong - albsRad)
+      c2_albs <- min(nc, albsLong + albsRad)
+
+      if (cy < r1_albs || cy > r2_albs || cx < c1_albs || cx > c2_albs) {
+        return(FALSE)
+      }
+    }
+
     r1 <- max(1L, cy - R)
     r2 <- min(nr, cy + R)
     c1 <- max(1L, cx - R)
@@ -862,7 +884,7 @@ suggest_next_center <- function(
       return(FALSE)
     }
 
-    if (isTRUE(prefer_no_overlap)) {
+    if (!isTRUE(gr$hasHit)) {
       overlap_cells <- rect_sum(sat_tested, r1, c1, r2, c2)
       if (overlap_cells > 0L) {
         return(FALSE)
@@ -887,7 +909,7 @@ suggest_next_center <- function(
 
     for (j in seq.int(start_col_idx, length(cols))) {
       cx <- cols[[j]]
-      if (is_valid_center(cy, cx)) {
+      if (is_valid_center(cx, cy)) {
         return(list(lat = cy, long = cx))
       }
     }
@@ -930,7 +952,7 @@ suggest_next_center <- function(
   for (row_idx in seq_along(row_positions)) {
     cy <- row_positions[[row_idx]]
     for (cx in col_positions) {
-      if (is_valid_center(cy, cx)) {
+      if (is_valid_center(cx, cy)) {
         dx <- cy - 1L
         dy <- cx - 1L
         dist_sq <- dx * dx + dy * dy
