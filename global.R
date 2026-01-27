@@ -42,6 +42,70 @@ clamp_radius <- function(x, fallback = 1L) {
   if (length(r) == 0L || is.na(r) || r < 1L) fallback else r[[1L]]
 }
 
+parse_int_in_range <- function(x, min = NULL, max = NULL) {
+  val <- suppressWarnings(as.integer(x))
+  if (length(val) == 0L || is.na(val)) {
+    return(list(valid = FALSE, value = NA_integer_))
+  }
+  val <- val[[1L]]
+  if (!is.null(min) && val < min) {
+    return(list(valid = FALSE, value = val))
+  }
+  if (!is.null(max) && val > max) {
+    return(list(valid = FALSE, value = val))
+  }
+  list(valid = TRUE, value = val)
+}
+
+validate_grid_dims <- function(nr, nc, min_dim = 5L) {
+  nr_parsed <- parse_int_in_range(nr, min = min_dim)
+  nc_parsed <- parse_int_in_range(nc, min = min_dim)
+  if (!nr_parsed$valid || !nc_parsed$valid) {
+    return(list(
+      valid = FALSE,
+      error = sprintf("Grid dimensions must be >= %d.", min_dim),
+      nr = nr_parsed$value,
+      nc = nc_parsed$value
+    ))
+  }
+  list(valid = TRUE, nr = nr_parsed$value, nc = nc_parsed$value)
+}
+
+validate_drop_coords <- function(cx, cy, nr, nc) {
+  cx_parsed <- parse_int_in_range(cx, min = 1L, max = nc)
+  cy_parsed <- parse_int_in_range(cy, min = 1L, max = nr)
+  if (!cx_parsed$valid || !cy_parsed$valid) {
+    return(list(
+      valid = FALSE,
+      error = "Provide drop coordinates within the grid.",
+      cx = cx_parsed$value,
+      cy = cy_parsed$value
+    ))
+  }
+  list(valid = TRUE, cx = cx_parsed$value, cy = cy_parsed$value)
+}
+
+validate_albs_inputs <- function(cx, cy, rad, nr, nc) {
+  cx_parsed <- parse_int_in_range(cx, min = 1L, max = nc)
+  cy_parsed <- parse_int_in_range(cy, min = 1L, max = nr)
+  rad_parsed <- parse_int_in_range(rad, min = 1L)
+  if (!cx_parsed$valid || !cy_parsed$valid || !rad_parsed$valid) {
+    return(list(
+      valid = FALSE,
+      error = "Provide ALBS center (Long (X), Lat (Y)) and radius.",
+      cx = cx_parsed$value,
+      cy = cy_parsed$value,
+      rad = rad_parsed$value
+    ))
+  }
+  list(
+    valid = TRUE,
+    cx = cx_parsed$value,
+    cy = cy_parsed$value,
+    rad = rad_parsed$value
+  )
+}
+
 # Summed-area table (integral image) for fast counts over rectangles
 build_sat <- function(logical_mat) {
   m <- matrix(as.integer(logical_mat), nrow = nrow(logical_mat), ncol = ncol(logical_mat))

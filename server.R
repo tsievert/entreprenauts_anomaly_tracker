@@ -256,15 +256,14 @@ server <- function(input, output, session) {
 
     nr <- gr$nr
     nc <- gr$nc
-
-    cx <- as.integer(input$albsLong)
-    cy <- as.integer(input$albsLat)
-    rad <- clamp_radius(input$albsRadius, fallback = NA_integer_)
-
-    if (is.na(cx) || is.na(cy) || is.na(rad)) {
-      showNotification("Provide ALBS center (Long (X), Lat (Y)) and radius.", type = "error")
+    validated <- validate_albs_inputs(input$albsLong, input$albsLat, input$albsRadius, nr, nc)
+    if (!isTRUE(validated$valid)) {
+      showNotification(validated$error, type = "error")
       return()
     }
+    cx <- validated$cx
+    cy <- validated$cy
+    rad <- validated$rad
 
     gr$albsDone <- TRUE
     gr$albsLat <- cy
@@ -324,12 +323,13 @@ server <- function(input, output, session) {
       showNotification("Provide a grid ID.", type = "error")
       return()
     }
-    nr <- as.integer(input$newGridRows)
-    nc <- as.integer(input$newGridCols)
-    if (is.na(nr) || is.na(nc) || nr < 5L || nc < 5L) {
-      showNotification("Grid dimensions must be >= 5.", type = "error")
+    validated <- validate_grid_dims(input$newGridRows, input$newGridCols, min_dim = 5L)
+    if (!isTRUE(validated$valid)) {
+      showNotification(validated$error, type = "error")
       return()
     }
+    nr <- validated$nr
+    nc <- validated$nc
     if (id %in% names(rv$grids)) {
       showNotification("Grid ID already exists.", type = "error")
       return()
@@ -1103,12 +1103,13 @@ server <- function(input, output, session) {
       return()
     }
 
-    cx <- as.integer(input$dropLong)
-    cy <- as.integer(input$dropLat)
-    if (is.na(cx) || is.na(cy)) {
-      showNotification("Provide drop coordinates.", type = "error")
+    validated <- validate_drop_coords(input$dropLong, input$dropLat, gr$nr, gr$nc)
+    if (!isTRUE(validated$valid)) {
+      showNotification(validated$error, type = "error")
       return()
     }
+    cx <- validated$cx
+    cy <- validated$cy
 
     nm <- current_radius_name()
     if (is.null(nm) || is.na(nm)) {
