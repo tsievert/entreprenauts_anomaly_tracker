@@ -425,6 +425,24 @@ server <- function(input, output, session) {
   })
 
   # ---------- Color management ----------
+  color_role_map <- list(
+    colPossible = list(field = "possible", idx = 1L),
+    colTested = list(field = "tested", idx = 2L),
+    colHit = list(field = "hit", idx = 3L),
+    colMiss = list(field = "miss", idx = 4L),
+    colSuggestion = list(field = "suggestion", idx = 5L),
+    colALBS = list(field = "albs", idx = 6L),
+    colImpossible = list(field = "impossible", idx = 7L),
+    colGridLines = list(field = "gridLines", idx = 8L)
+  )
+
+  update_color_role <- function(input_id, field, idx) {
+    cs <- rv$color_state
+    pal <- cs$palette %||% "magma"
+    def <- get_viridis_colors(pal, 8L)[[idx]]
+    cs[[field]] <- safe_color(input[[input_id]], cs[[field]] %||% def)
+    rv$color_state <- cs
+  }
 
   observeEvent(input$viridisPalette, {
     pal <- input$viridisPalette %||% (rv$color_state$palette %||% "magma")
@@ -450,61 +468,10 @@ server <- function(input, output, session) {
     rv$color_state <- cs
   })
 
-  observeEvent(input$colPossible, {
-    cs <- rv$color_state
-    pal <- cs$palette %||% "magma"
-    def <- get_viridis_colors(pal, 8L)[[1L]]
-    cs$possible <- safe_color(input$colPossible, cs$possible %||% def)
-    rv$color_state <- cs
-  })
-  observeEvent(input$colTested, {
-    cs <- rv$color_state
-    pal <- cs$palette %||% "magma"
-    def <- get_viridis_colors(pal, 8L)[[2L]]
-    cs$tested <- safe_color(input$colTested, cs$tested %||% def)
-    rv$color_state <- cs
-  })
-  observeEvent(input$colHit, {
-    cs <- rv$color_state
-    pal <- cs$palette %||% "magma"
-    def <- get_viridis_colors(pal, 8L)[[3L]]
-    cs$hit <- safe_color(input$colHit, cs$hit %||% def)
-    rv$color_state <- cs
-  })
-  observeEvent(input$colMiss, {
-    cs <- rv$color_state
-    pal <- cs$palette %||% "magma"
-    def <- get_viridis_colors(pal, 8L)[[4L]]
-    cs$miss <- safe_color(input$colMiss, cs$miss %||% def)
-    rv$color_state <- cs
-  })
-  observeEvent(input$colSuggestion, {
-    cs <- rv$color_state
-    pal <- cs$palette %||% "magma"
-    def <- get_viridis_colors(pal, 8L)[[5L]]
-    cs$suggestion <- safe_color(input$colSuggestion, cs$suggestion %||% def)
-    rv$color_state <- cs
-  })
-  observeEvent(input$colALBS, {
-    cs <- rv$color_state
-    pal <- cs$palette %||% "magma"
-    def <- get_viridis_colors(pal, 8L)[[6L]]
-    cs$albs <- safe_color(input$colALBS, cs$albs %||% def)
-    rv$color_state <- cs
-  })
-  observeEvent(input$colImpossible, {
-    cs <- rv$color_state
-    pal <- cs$palette %||% "magma"
-    def <- get_viridis_colors(pal, 8L)[[7L]]
-    cs$impossible <- safe_color(input$colImpossible, cs$impossible %||% def)
-    rv$color_state <- cs
-  })
-  observeEvent(input$colGridLines, {
-    cs <- rv$color_state
-    pal <- cs$palette %||% "magma"
-    def <- get_viridis_colors(pal, 8L)[[8L]]
-    cs$gridLines <- safe_color(input$colGridLines, cs$gridLines %||% def)
-    rv$color_state <- cs
+  purrr::iwalk(color_role_map, function(role, input_id) {
+    observeEvent(input[[input_id]], {
+      update_color_role(input_id, role$field, role$idx)
+    })
   })
 
   output$colorPreviewPlot <- renderPlot(
