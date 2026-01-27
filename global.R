@@ -799,25 +799,8 @@ suggest_next_center <- function(
   sat_untested <- build_sat(untested)
   sat_tested <- build_sat(tested_possible)
 
-  coords <- generateRadiusAwareLawnmower(
-    nr           = nr,
-    nc           = nc,
-    R            = R,
-    albsDone     = gr$albsDone,
-    albsLat      = gr$albsLat,
-    albsLong     = gr$albsLong,
-    albsRad      = gr$albsRad,
-    allowPartial = allow_partial
-  )
-
-  if (nrow(coords) == 0L) {
-    return(NULL)
-  }
-
-  n_cand <- nrow(coords)
-  new_cells <- integer(n_cand)
-  overlap_cells <- integer(n_cand)
-  dist_sq <- numeric(n_cand)
+  step <- 2L * R + 1L
+  if (step < 1L) step <- 1L
 
   last <- gr$lastSearch
   last_lat <- NA_integer_
@@ -827,75 +810,146 @@ suggest_next_center <- function(
     if (!is.null(last$long)) last_long <- suppressWarnings(as.integer(last$long))
   }
 
-  for (i in seq_len(n_cand)) {
-    cy <- coords[i, 1L]
-    cx <- coords[i, 2L]
+  r_min <- 1L
+  r_max <- nr
+  c_min <- 1L
+  c_max <- nc
 
+  if (isTRUE(gr$albsDone) &&
+    !is.na(gr$albsLat) &&
+    !is.na(gr$albsLong) &&
+    !is.na(gr$albsRad)) {
+    albsLat <- as.integer(gr$albsLat)
+    albsLong <- as.integer(gr$albsLong)
+    albsRad <- as.integer(gr$albsRad)
+
+    r_min <- max(r_min, albsLat - albsRad)
+    r_max <- min(r_max, albsLat + albsRad)
+    c_min <- max(c_min, albsLong - albsRad)
+    c_max <- min(c_max, albsLong + albsRad)
+  }
+
+  if (!allow_partial && R > 0L) {
+    r_min <- max(r_min, R + 1L)
+    r_max <- min(r_max, nr - R)
+    c_min <- max(c_min, R + 1L)
+    c_max <- min(c_max, nc - R)
+  }
+
+  if (r_min > r_max || c_min > c_max) {
+    return(NULL)
+  }
+
+  row_positions <- seq.int(r_min, r_max, by = step)
+  col_positions <- seq.int(c_min, c_max, by = step)
+
+  if (!length(row_positions) || !length(col_positions)) {
+    return(NULL)
+  }
+
+  is_valid_center <- function(cy, cx) {
     r1 <- max(1L, cy - R)
     r2 <- min(nr, cy + R)
     c1 <- max(1L, cx - R)
     c2 <- min(nc, cx + R)
 
     if (r1 > r2 || c1 > c2) {
-      new_cells[i] <- 0L
-      overlap_cells[i] <- 0L
-      dist_sq[i] <- NA_real_
-    } else {
-      new_cells[i] <- rect_sum(sat_untested, r1, c1, r2, c2)
-      overlap_cells[i] <- rect_sum(sat_tested, r1, c1, r2, c2)
+      return(FALSE)
+    }
 
-      if (!is.na(last_lat) && !is.na(last_long)) {
-        dx <- as.numeric(cx - last_long)
-        dy <- as.numeric(cy - last_lat)
-        dist_sq[i] <- dx * dx + dy * dy
-      } else {
-        dist_sq[i] <- NA_real_
+    new_cells <- rect_sum(sat_untested, r1, c1, r2, c2)
+    if (new_cells <= 0L) {
+      return(FALSE)
+    }
+
+    if (isTRUE(prefer_no_overlap)) {
+      overlap_cells <- rect_sum(sat_tested, r1, c1, r2, c2)
+      if (overlap_cells > 0L) {
+        return(FALSE)
+      }
+    }
+
+    TRUE
+  }
+
+  find_in_row <- function(row_idx, start_col_idx = 1L) {
+    if (row_idx < 1L || row_idx > length(row_positions)) {
+      return(NULL)
+    }
+
+    cy <- row_positions[[row_idx]]
+    cols <- if (row_idx %% 2L == 1L) col_positions else rev(col_positions)
+
+    if (start_col_idx < 1L) start_col_idx <- 1L
+    if (start_col_idx > length(cols)) {
+      return(NULL)
+    }
+
+    for (j in seq.int(start_col_idx, length(cols))) {
+      cx <- cols[[j]]
+      if (is_valid_center(cy, cx)) {
+        return(list(lat = cy, long = cx))
+      }
+    }
+
+    NULL
+  }
+
+  if (!is.na(last_lat) && !is.na(last_long)) {
+    row_idx <- which.min(abs(row_positions - last_lat))
+    cols <- if (row_idx %% 2L == 1L) col_positions else rev(col_positions)
+
+    if (row_idx %% 2L == 1L) {
+      start_col_idx <- which(cols > last_long)
+    } else {
+      start_col_idx <- which(cols < last_long)
+    }
+    start_col_idx <- if (length(start_col_idx)) start_col_idx[[1L]] else length(cols) + 1L
+
+    hit <- find_in_row(row_idx, start_col_idx)
+    if (!is.null(hit)) {
+      return(hit)
+    }
+
+    if (row_idx < length(row_positions)) {
+      for (next_row in seq.int(row_idx + 1L, length(row_positions))) {
+        hit <- find_in_row(next_row, 1L)
+        if (!is.null(hit)) {
+          return(hit)
+        }
+      }
+    }
+
+    return(NULL)
+  }
+
+  best_row <- NA_integer_
+  best_col <- NA_integer_
+  best_dist <- Inf
+
+  for (row_idx in seq_along(row_positions)) {
+    cy <- row_positions[[row_idx]]
+    for (cx in col_positions) {
+      if (is_valid_center(cy, cx)) {
+        dx <- cy - 1L
+        dy <- cx - 1L
+        dist_sq <- dx * dx + dy * dy
+        if (dist_sq < best_dist ||
+          (dist_sq == best_dist &&
+            (is.na(best_row) || cy < best_row || (cy == best_row && cx < best_col)))) {
+          best_dist <- dist_sq
+          best_row <- cy
+          best_col <- cx
+        }
       }
     }
   }
 
-  valid <- new_cells > 0L
-  if (!any(valid)) {
+  if (is.na(best_row) || is.na(best_col)) {
     return(NULL)
   }
 
-  cand_idx <- which(valid)
-
-  if (isTRUE(prefer_no_overlap)) {
-    no_overlap <- cand_idx[overlap_cells[cand_idx] == 0L]
-    if (length(no_overlap) > 0L) {
-      cand_idx <- no_overlap
-    }
-  }
-
-  # 1) maximize new_cells
-  max_new <- max(new_cells[cand_idx])
-  best <- cand_idx[new_cells[cand_idx] == max_new]
-
-  # 2) minimize overlap_cells
-  if (length(best) > 1L) {
-    overlaps <- overlap_cells[best]
-    min_overlap <- min(overlaps)
-    best <- best[overlaps == min_overlap]
-  }
-
-  # 3) minimize distance to last drop (squared)
-  if (length(best) > 1L) {
-    d <- dist_sq[best]
-    d[is.na(d)] <- Inf
-    min_d <- min(d)
-    best <- best[d == min_d]
-  }
-
-  if (length(best) == 0L) {
-    return(NULL)
-  }
-
-  idx <- best[[1L]]
-  list(
-    lat  = coords[idx, 1L],
-    long = coords[idx, 2L]
-  )
+  list(lat = best_row, long = best_col)
 }
 
 # ---------- Grid helpers ----------
