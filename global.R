@@ -612,6 +612,104 @@ direction_line_mask <- function(nr, nc, cx, cy, dir, R) {
   NULL
 }
 
+direction_line_window <- function(rows, cols, cx, cy, dir, R) {
+  if (is.null(dir) || is.na(dir) || !nzchar(dir)) {
+    return(NULL)
+  }
+
+  if (!length(rows) || !length(cols)) {
+    return(NULL)
+  }
+
+  cx <- suppressWarnings(as.integer(cx))
+  cy <- suppressWarnings(as.integer(cy))
+  if (is.na(cx) || is.na(cy)) {
+    return(NULL)
+  }
+
+  row_start <- rows[[1L]]
+  row_end <- rows[[length(rows)]]
+  col_start <- cols[[1L]]
+  col_end <- cols[[length(cols)]]
+
+  if (row_start > row_end || col_start > col_end) {
+    return(NULL)
+  }
+
+  d <- toupper(as.character(dir[[1L]]))
+
+  if (identical(d, "BELOW")) {
+    r1 <- cy
+    r2 <- cy
+    c1 <- cx
+    c2 <- cx
+  } else {
+    R <- suppressWarnings(as.integer(R))
+    if (is.na(R) || R <= 0L) {
+      return(NULL)
+    }
+
+    if (identical(d, "N")) {
+      r1 <- cy - R
+      r2 <- cy - 1L
+      c1 <- cx
+      c2 <- cx
+    } else if (identical(d, "S")) {
+      r1 <- cy + 1L
+      r2 <- cy + R
+      c1 <- cx
+      c2 <- cx
+    } else if (identical(d, "E")) {
+      r1 <- cy
+      r2 <- cy
+      c1 <- cx + 1L
+      c2 <- cx + R
+    } else if (identical(d, "W")) {
+      r1 <- cy
+      r2 <- cy
+      c1 <- cx - R
+      c2 <- cx - 1L
+    } else if (identical(d, "NE")) {
+      r1 <- cy - R
+      r2 <- cy - 1L
+      c1 <- cx + 1L
+      c2 <- cx + R
+    } else if (identical(d, "NW")) {
+      r1 <- cy - R
+      r2 <- cy - 1L
+      c1 <- cx - R
+      c2 <- cx - 1L
+    } else if (identical(d, "SE")) {
+      r1 <- cy + 1L
+      r2 <- cy + R
+      c1 <- cx + 1L
+      c2 <- cx + R
+    } else if (identical(d, "SW")) {
+      r1 <- cy + 1L
+      r2 <- cy + R
+      c1 <- cx - R
+      c2 <- cx - 1L
+    } else {
+      return(NULL)
+    }
+  }
+
+  r1 <- max(row_start, r1)
+  r2 <- min(row_end, r2)
+  c1 <- max(col_start, c1)
+  c2 <- min(col_end, c2)
+
+  if (r1 > r2 || c1 > c2) {
+    return(NULL)
+  }
+
+  mask <- matrix(FALSE, nrow = length(rows), ncol = length(cols))
+  row_idx <- (r1:r2) - row_start + 1L
+  col_idx <- (c1:c2) - col_start + 1L
+  mask[row_idx, col_idx] <- TRUE
+  mask
+}
+
 constrain_grid_by_direction <- function(gr, cx, cy, dir, R) {
   if (is.null(dir) || is.na(dir) || !nzchar(dir)) {
     return(gr)
@@ -634,6 +732,29 @@ constrain_grid_by_direction <- function(gr, cx, cy, dir, R) {
   }
 
   gr$possible <- gr$possible & mask
+  gr
+}
+
+# ---------- Drop window helpers ----------
+
+apply_drop_window <- function(gr, rows, cols, line_mask = NULL) {
+  if (!length(rows) || !length(cols)) {
+    return(gr)
+  }
+
+  sub_mask <- gr$hitMask[rows, cols, drop = FALSE]
+  if (is.null(line_mask)) {
+    sub_mask[] <- TRUE
+  } else if (is.matrix(line_mask)) {
+    if (nrow(line_mask) != length(rows) || ncol(line_mask) != length(cols)) {
+      stop("line_mask must match the drop window dimensions.")
+    }
+    sub_mask <- sub_mask | !line_mask
+  } else {
+    stop("line_mask must be a logical matrix or NULL.")
+  }
+
+  gr$hitMask[rows, cols] <- sub_mask
   gr
 }
 
@@ -778,116 +899,6 @@ suggest_next_center <- function(
 }
 
 # ---------- Grid helpers ----------
-
-apply_drop <- function(gr, cx, cy, R, outcome, dir, radius_name = NA_character_) {
-  gr <- grid_push_history(gr)
-
-  nr <- gr$nr
-  nc <- gr$nc
-  R <- suppressWarnings(as.integer(R))
-  if (is.na(R) || R < 0L) {
-    R <- 0L
-  }
-  cx <- suppressWarnings(as.integer(cx))
-  cy <- suppressWarnings(as.integer(cy))
-
-  r1 <- max(1L, cy - R)
-  r2 <- min(nr, cy + R)
-  c1 <- max(1L, cx - R)
-  c2 <- min(nc, cx + R)
-
-  rows <- if (r1 <= r2) seq.int(r1, r2) else integer(0)
-  cols <- if (c1 <= c2) seq.int(c1, c2) else integer(0)
-
-  test_mask <- matrix(FALSE, nrow = nr, ncol = nc)
-  if (length(rows) > 0L && length(cols) > 0L) {
-    test_mask[rows, cols] <- TRUE
-    area_eff <- length(rows) * length(cols)
-  } else {
-    area_eff <- 0L
-  }
-
-  remaining_before <- sum(apply_albs_mask(
-    gr$possible,
-    albsDone = gr$albsDone,
-    albsLat = gr$albsLat,
-    albsLong = gr$albsLong,
-    albsRad = gr$albsRad
-  ) & !gr$hitMask)
-
-  if (identical(outcome, "hit") && nzchar(dir)) {
-    line_mask <- direction_line_mask(
-      nr  = nr,
-      nc  = nc,
-      cx  = cx,
-      cy  = cy,
-      dir = dir,
-      R   = R
-    )
-    if (!is.null(line_mask)) {
-      to_mark <- test_mask & !line_mask
-    } else {
-      to_mark <- test_mask
-    }
-  } else {
-    to_mark <- test_mask
-  }
-
-  gr$hitMask[to_mark] <- TRUE
-
-  remaining_after <- sum(apply_albs_mask(
-    gr$possible,
-    albsDone = gr$albsDone,
-    albsLat = gr$albsLat,
-    albsLong = gr$albsLong,
-    albsRad = gr$albsRad
-  ) & !gr$hitMask)
-  cellsChecked <- area_eff
-  ratio <- if (area_eff > 0L) (remaining_before - remaining_after) / area_eff else 0
-
-  if (identical(outcome, "hit")) {
-    gr$hasHit <- TRUE
-  }
-
-  dist_last <- NA_real_
-  if (!is.null(gr$lastSearch)) {
-    dx <- cx - gr$lastSearch$long
-    dy <- cy - gr$lastSearch$lat
-    dist_last <- sqrt(dx * dx + dy * dy)
-  }
-
-  if (identical(outcome, "hit")) {
-    gr <- constrain_grid_by_direction(gr, cx, cy, dir, R)
-  }
-
-  gr <- bump_remaining_version(gr)
-
-  gr$lastSearch <- list(
-    lat        = cy,
-    long       = cx,
-    R          = R,
-    dir        = dir,
-    radiusName = radius_name
-  )
-
-  row <- list(
-    grid             = gr$id,
-    action           = "Drop",
-    long             = cx,
-    lat              = cy,
-    radiusName       = radius_name,
-    radiusVal        = R,
-    outcome          = outcome,
-    direction        = dir,
-    stage            = if (ratio >= 1) "FULL" else "PARTIAL",
-    ratio            = ratio,
-    remaining        = remaining_after,
-    cellsChecked     = cellsChecked,
-    distanceFromLast = dist_last
-  )
-
-  list(grid = gr, log_row = row)
-}
 
 new_grid <- function(id, nr, nc) {
   list(

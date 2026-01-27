@@ -1087,17 +1087,89 @@ server <- function(input, output, session) {
     outcome <- input$outcome %||% "miss"
     dir <- if (identical(outcome, "hit")) input$pingDirection %||% "" else ""
 
-    result <- apply_drop(
-      gr = gr,
-      cx = cx,
-      cy = cy,
-      R = R,
-      outcome = outcome,
-      dir = dir,
-      radius_name = nm
+    gr <- grid_push_history(gr)
+
+    r1 <- max(1L, cy - R)
+    r2 <- min(gr$nr, cy + R)
+    c1 <- max(1L, cx - R)
+    c2 <- min(gr$nc, cx + R)
+
+    rows <- if (r1 <= r2) seq.int(r1, r2) else integer(0)
+    cols <- if (c1 <= c2) seq.int(c1, c2) else integer(0)
+    area_eff <- if (length(rows) > 0L && length(cols) > 0L) {
+      length(rows) * length(cols)
+    } else {
+      0L
+    }
+
+    remaining_before <- sum(apply_albs_mask(
+      gr$possible,
+      albsDone = gr$albsDone,
+      albsLat = gr$albsLat,
+      albsLong = gr$albsLong,
+      albsRad = gr$albsRad
+    ) & !gr$hitMask)
+
+    line_mask <- NULL
+    if (identical(outcome, "hit") && nzchar(dir)) {
+      line_mask <- direction_line_window(rows, cols, cx, cy, dir, R)
+    }
+
+    gr <- apply_drop_window(gr, rows, cols, line_mask)
+
+    remaining_after <- sum(apply_albs_mask(
+      gr$possible,
+      albsDone = gr$albsDone,
+      albsLat = gr$albsLat,
+      albsLong = gr$albsLong,
+      albsRad = gr$albsRad
+    ) & !gr$hitMask)
+
+    ratio <- if (area_eff > 0L) (remaining_before - remaining_after) / area_eff else 0
+
+    if (identical(outcome, "hit")) {
+      gr$hasHit <- TRUE
+    }
+
+    dist_last <- NA_real_
+    if (!is.null(gr$lastSearch)) {
+      dx <- cx - gr$lastSearch$long
+      dy <- cy - gr$lastSearch$lat
+      dist_last <- sqrt(dx * dx + dy * dy)
+    }
+
+    if (identical(outcome, "hit")) {
+      gr <- constrain_grid_by_direction(gr, cx, cy, dir, R)
+    }
+
+    gr <- bump_remaining_version(gr)
+
+    gr$lastSearch <- list(
+      lat        = cy,
+      long       = cx,
+      R          = R,
+      dir        = dir,
+      radiusName = nm
     )
-    rv$grids[[gid]] <- result$grid
-    log_event_grid(gid, result$log_row)
+
+    log_row <- list(
+      grid             = gr$id,
+      action           = "Drop",
+      long             = cx,
+      lat              = cy,
+      radiusName       = nm,
+      radiusVal        = R,
+      outcome          = outcome,
+      direction        = dir,
+      stage            = if (ratio >= 1) "FULL" else "PARTIAL",
+      ratio            = ratio,
+      remaining        = remaining_after,
+      cellsChecked     = area_eff,
+      distanceFromLast = dist_last
+    )
+
+    rv$grids[[gid]] <- gr
+    log_event_grid(gid, log_row)
   })
 
   observeEvent(input$resetGrid, {
