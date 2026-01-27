@@ -103,6 +103,18 @@ server <- function(input, output, session) {
     gr
   })
 
+  get_current_grid_or_notify <- function(message = "No grid selected.", type = "error") {
+    gid <- current_grid_id()
+    gr <- current_grid()
+    if (is.null(gid) || is.null(gr)) {
+      if (!is.null(message) && nzchar(message)) {
+        showNotification(message, type = type)
+      }
+      return(NULL)
+    }
+    list(gid = gid, grid = gr)
+  }
+
   current_radius_name <- reactive({
     df <- rv$radiiDF
     if (is.null(df) || nrow(df) == 0L) {
@@ -247,12 +259,12 @@ server <- function(input, output, session) {
   })
 
   observeEvent(input$applyALBS, {
-    gid <- current_grid_id()
-    gr <- current_grid()
-    if (is.null(gid) || is.null(gr)) {
-      showNotification("No grid selected.", type = "error")
+    current <- get_current_grid_or_notify()
+    if (is.null(current)) {
       return()
     }
+    gid <- current$gid
+    gr <- current$grid
 
     nr <- gr$nr
     nc <- gr$nc
@@ -291,11 +303,12 @@ server <- function(input, output, session) {
   })
 
   observeEvent(input$clearALBS, {
-    gid <- current_grid_id()
-    gr <- current_grid()
-    if (is.null(gid) || is.null(gr)) {
+    current <- get_current_grid_or_notify(message = NULL)
+    if (is.null(current)) {
       return()
     }
+    gid <- current$gid
+    gr <- current$grid
 
     gr$albsDone <- FALSE
     gr$albsLat <- NA_integer_
@@ -1096,12 +1109,12 @@ server <- function(input, output, session) {
   }
 
   observeEvent(input$doDrop, {
-    gid <- current_grid_id()
-    gr <- current_grid()
-    if (is.null(gid) || is.null(gr)) {
-      showNotification("No grid selected.", type = "error")
+    current <- get_current_grid_or_notify()
+    if (is.null(current)) {
       return()
     }
+    gid <- current$gid
+    gr <- current$grid
 
     validated <- validate_drop_coords(input$dropLong, input$dropLat, gr$nr, gr$nc)
     if (!isTRUE(validated$valid)) {
@@ -1225,11 +1238,12 @@ server <- function(input, output, session) {
   })
 
   observeEvent(input$resetGrid, {
-    gid <- current_grid_id()
-    gr <- current_grid()
-    if (is.null(gid) || is.null(gr)) {
+    current <- get_current_grid_or_notify(message = NULL)
+    if (is.null(current)) {
       return()
     }
+    gid <- current$gid
+    gr <- current$grid
 
     gr$possible <- matrix(TRUE, nrow = gr$nr, ncol = gr$nc)
     gr$hitMask <- matrix(FALSE, nrow = gr$nr, ncol = gr$nc)
@@ -1251,11 +1265,12 @@ server <- function(input, output, session) {
   })
 
   observeEvent(input$undoDrop, {
-    gid <- current_grid_id()
-    gr <- current_grid()
-    if (is.null(gid) || is.null(gr)) {
+    current <- get_current_grid_or_notify(message = NULL)
+    if (is.null(current)) {
       return()
     }
+    gid <- current$gid
+    gr <- current$grid
 
     if (is.null(gr$history) || length(gr$history) == 0L) {
       showNotification("No more drops to undo for this grid.", type = "message")
