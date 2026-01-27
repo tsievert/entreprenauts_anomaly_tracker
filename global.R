@@ -350,6 +350,41 @@ y_to_row <- function(y, nr) {
   as.integer(round(y))
 }
 
+# ---------- ALBS helpers ----------
+
+apply_albs_mask <- function(possible,
+                            albsDone = FALSE,
+                            albsLat = NA_integer_,
+                            albsLong = NA_integer_,
+                            albsRad = NA_integer_) {
+  if (!isTRUE(albsDone) || is.null(possible) || !is.matrix(possible)) {
+    return(possible)
+  }
+
+  albsLat <- suppressWarnings(as.integer(albsLat))
+  albsLong <- suppressWarnings(as.integer(albsLong))
+  albsRad <- suppressWarnings(as.integer(albsRad))
+  if (is.na(albsLat) || is.na(albsLong) || is.na(albsRad) || albsRad < 0L) {
+    return(possible)
+  }
+
+  nr <- nrow(possible)
+  nc <- ncol(possible)
+
+  r1 <- max(1L, albsLat - albsRad)
+  r2 <- min(nr, albsLat + albsRad)
+  c1 <- max(1L, albsLong - albsRad)
+  c2 <- min(nc, albsLong + albsRad)
+
+  if (r1 > r2 || c1 > c2) {
+    return(possible)
+  }
+
+  mask <- matrix(FALSE, nrow = nr, ncol = nc)
+  mask[r1:r2, c1:c2] <- TRUE
+  possible & mask
+}
+
 # ---------- Direction helpers (radius-limited line / sector) ----------
 
 direction_line_mask <- function(nr, nc, cx, cy, dir, R) {
@@ -487,7 +522,13 @@ suggest_next_center <- function(
     R <- 0L
   }
 
-  possible <- gr$possible
+  possible <- apply_albs_mask(
+    gr$possible,
+    albsDone = gr$albsDone,
+    albsLat = gr$albsLat,
+    albsLong = gr$albsLong,
+    albsRad = gr$albsRad
+  )
   hitMask <- gr$hitMask
 
   if (!is.matrix(possible) || !is.matrix(hitMask)) {
