@@ -138,6 +138,12 @@ ui <- navbarPage(
                   "useSuggestion",
                   "Use suggested position",
                   class = "btn-block btn-wrap"
+                ),
+                bsTooltip(
+                  "useSuggestion",
+                  title = "Auto-fill Long/Lat from the current suggestion (requires a suggestion).",
+                  placement = "right",
+                  trigger = "hover"
                 )
               )
             ),
@@ -168,6 +174,12 @@ ui <- navbarPage(
                   "doDrop",
                   "Record drop",
                   class = "btn-primary btn-block btn-wrap"
+                ),
+                bsTooltip(
+                  "doDrop",
+                  title = "Log a drop using the Long/Lat and outcome above.",
+                  placement = "right",
+                  trigger = "hover"
                 )
               ),
               column(
@@ -233,7 +245,8 @@ ui <- navbarPage(
             click = "gridClick",
             height = "100%"
           )
-        )
+        ),
+        helpText("Click the grid to set Long/Lat; use ‘Use suggested position’ to auto-fill.")
       )
     )
   ),
