@@ -288,6 +288,19 @@ server <- function(input, output, session) {
 
     updateCheckboxInput(session, "showALBS", value = FALSE)
 
+    remaining_after <- sum(gr$possible & !gr$hitMask)
+    log_event_grid(gid, list(
+      grid       = gid,
+      action     = "ALBS",
+      long       = cx,
+      lat        = cy,
+      radiusName = "ALBS",
+      radiusVal  = rad,
+      outcome    = "Mask applied",
+      stage      = "ALBS",
+      remaining  = remaining_after
+    ))
+
     showNotification(sprintf("ALBS applied to grid '%s'.", gid), type = "message")
   })
 
@@ -305,6 +318,15 @@ server <- function(input, output, session) {
 
     rv$grids[[gid]] <- gr
     updateCheckboxInput(session, "showALBS", value = TRUE)
+
+    remaining_after <- sum(gr$possible & !gr$hitMask)
+    log_event_grid(gid, list(
+      grid      = gid,
+      action    = "ALBS Clear",
+      outcome   = "Mask cleared",
+      stage     = "ALBS",
+      remaining = remaining_after
+    ))
   })
 
   # ---------- Grid creation / deletion / import / export ----------
