@@ -240,7 +240,7 @@ ui <- navbarPage(
                     class = "col-xs-12 col-sm-6",
                     div(
                       class = "numeric-input-common",
-                      numericInput("albsLong", "ALBS center Long (X)", value = NA_real_, min = 1)
+                      numericInput("albsLong", "ALBS center Long (X)", value = NA_real_)
                     )
                   ),
                   column(
@@ -248,7 +248,7 @@ ui <- navbarPage(
                     class = "col-xs-12 col-sm-6",
                     div(
                       class = "numeric-input-common",
-                      numericInput("albsLat", "ALBS center Lat (Y)", value = NA_real_, min = 1)
+                      numericInput("albsLat", "ALBS center Lat (Y)", value = NA_real_)
                     )
                   )
                 ),
