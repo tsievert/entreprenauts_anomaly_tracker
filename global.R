@@ -86,13 +86,13 @@ validate_drop_coords <- function(cx, cy, nr, nc) {
 }
 
 validate_albs_inputs <- function(cx, cy, rad, nr, nc) {
-  cx_parsed <- parse_int_in_range(cx, min = 1L, max = nc)
-  cy_parsed <- parse_int_in_range(cy, min = 1L, max = nr)
+  cx_parsed <- parse_int_in_range(cx)
+  cy_parsed <- parse_int_in_range(cy)
   rad_parsed <- parse_int_in_range(rad, min = 1L)
   if (!cx_parsed$valid || !cy_parsed$valid || !rad_parsed$valid) {
     return(list(
       valid = FALSE,
-      error = "Provide ALBS center (Long (X), Lat (Y)) and radius.",
+      error = "Provide ALBS center coordinates (Long (X), Lat (Y)) and radius.",
       cx = cx_parsed$value,
       cy = cy_parsed$value,
       rad = rad_parsed$value

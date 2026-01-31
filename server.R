@@ -230,10 +230,29 @@ server <- function(input, output, session) {
     if (!isTRUE(gr$albsDone)) {
       "ALBS: not applied."
     } else {
-      sprintf(
+      nr <- gr$nr
+      nc <- gr$nc
+      cx <- gr$albsLong
+      cy <- gr$albsLat
+      rad <- gr$albsRad
+
+      r1 <- max(1L, cy - rad)
+      r2 <- min(nr, cy + rad)
+      c1 <- max(1L, cx - rad)
+      c2 <- min(nc, cx + rad)
+
+      base_msg <- sprintf(
         "ALBS active: center (Long (X)=%d, Lat (Y)=%d), radius %d.",
-        gr$albsLong, gr$albsLat, gr$albsRad
+        cx, cy, rad
       )
+      if (r1 > r2 || c1 > c2) {
+        paste0(
+          base_msg,
+          " WARNING: ALBS window is completely outside the grid; no cells are available until you update ALBS."
+        )
+      } else {
+        base_msg
+      }
     }
   })
 
@@ -902,16 +921,18 @@ server <- function(input, output, session) {
         c1 <- max(1L, cx - rad)
         c2 <- min(nc, cx + rad)
 
-        p <- p + annotate(
-          "rect",
-          xmin = c1 - 0.5,
-          xmax = c2 + 0.5,
-          ymin = r1 - 0.5,
-          ymax = r2 + 0.5,
-          fill = NA,
-          color = col_albs,
-          linewidth = 0.6
-        )
+        if (r1 <= r2 && c1 <= c2) {
+          p <- p + annotate(
+            "rect",
+            xmin = c1 - 0.5,
+            xmax = c2 + 0.5,
+            ymin = r1 - 0.5,
+            ymax = r2 + 0.5,
+            fill = NA,
+            color = col_albs,
+            linewidth = 0.6
+          )
+        }
       }
 
       # Previous drops markers (toggleable, separate from debug overlay)
