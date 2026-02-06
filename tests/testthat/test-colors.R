@@ -17,11 +17,13 @@ test_that("default_color_state uses a known palette and valid hex colors", {
   expect_true(st$palette %in% c("magma", "inferno", "plasma", "viridis", "cividis"))
 
   cols <- c(
-    st$grid_fill,
-    st$hit_fill,
-    st$miss_fill,
-    st$suggestion_fill,
-    st$hover_outline
+    st$possible,
+    st$tested,
+    st$hit,
+    st$miss,
+    st$albs,
+    st$impossible,
+    st$gridLines
   )
   expect_true(all(grepl(.hex_regex, cols)))
 })

@@ -106,26 +106,6 @@ validate_albs_inputs <- function(cx, cy, rad, nr, nc) {
   )
 }
 
-# Summed-area table (integral image) for fast counts over rectangles
-build_sat <- function(logical_mat) {
-  m <- matrix(as.integer(logical_mat), nrow = nrow(logical_mat), ncol = ncol(logical_mat))
-  cs1 <- apply(m, 2, cumsum)
-  cs2 <- apply(cs1, 1, cumsum)
-  t(cs2)
-}
-
-# Sum over rectangle [r1..r2, c1..c2], inclusive, 1-indexed
-rect_sum <- function(sat, r1, c1, r2, c2) {
-  if (r1 > r2 || c1 > c2) {
-    return(0L)
-  }
-  a <- sat[r2, c2]
-  b <- if (r1 > 1L) sat[r1 - 1L, c2] else 0
-  c <- if (c1 > 1L) sat[r2, c1 - 1L] else 0
-  d <- if (r1 > 1L && c1 > 1L) sat[r1 - 1L, c1 - 1L] else 0
-  as.integer(a - b - c + d)
-}
-
 # ---------- Logging helpers (pure data-frame API) ----------
 
 .new_log_df <- function() {
@@ -197,7 +177,7 @@ log_event_df <- function(log_df, row) {
 
 get_viridis_colors <- function(
   palette = c("magma", "inferno", "plasma", "viridis", "cividis"),
-  n = 8L
+  n = 7L
 ) {
   palette <- match.arg(palette)
   n <- as.integer(n)
@@ -207,7 +187,7 @@ get_viridis_colors <- function(
 
 default_color_state <- function() {
   pal_name <- "magma"
-  cols <- get_viridis_colors(pal_name, 8L)
+  cols <- get_viridis_colors(pal_name, 7L)
 
   list(
     palette    = pal_name,
@@ -215,10 +195,9 @@ default_color_state <- function() {
     tested     = cols[[2L]],
     hit        = cols[[3L]],
     miss       = cols[[4L]],
-    suggestion = cols[[5L]],
-    albs       = cols[[6L]],
-    impossible = cols[[7L]],
-    gridLines  = cols[[8L]]
+    albs       = cols[[5L]],
+    impossible = cols[[6L]],
+    gridLines  = cols[[7L]]
   )
 }
 
@@ -228,16 +207,15 @@ normalize_color_state <- function(cs) {
   base <- default_color_state()
   pal <- base$palette %||% "magma"
 
-  cols_base <- get_viridis_colors(pal, 8L)
+  cols_base <- get_viridis_colors(pal, 7L)
 
   if (is.null(base$possible) || !nzchar(base$possible)) base$possible <- cols_base[[1L]]
   if (is.null(base$tested) || !nzchar(base$tested)) base$tested <- cols_base[[2L]]
   if (is.null(base$hit) || !nzchar(base$hit)) base$hit <- cols_base[[3L]]
   if (is.null(base$miss) || !nzchar(base$miss)) base$miss <- cols_base[[4L]]
-  if (is.null(base$suggestion) || !nzchar(base$suggestion)) base$suggestion <- cols_base[[5L]]
-  if (is.null(base$albs) || !nzchar(base$albs)) base$albs <- cols_base[[6L]]
-  if (is.null(base$impossible) || !nzchar(base$impossible)) base$impossible <- cols_base[[7L]]
-  if (is.null(base$gridLines) || !nzchar(base$gridLines)) base$gridLines <- cols_base[[8L]]
+  if (is.null(base$albs) || !nzchar(base$albs)) base$albs <- cols_base[[5L]]
+  if (is.null(base$impossible) || !nzchar(base$impossible)) base$impossible <- cols_base[[6L]]
+  if (is.null(base$gridLines) || !nzchar(base$gridLines)) base$gridLines <- cols_base[[7L]]
 
   if (is.null(cs) || !is.list(cs)) {
     return(base)
@@ -247,7 +225,6 @@ normalize_color_state <- function(cs) {
     identical(cs$tested, "#BBBBBB") &&
     identical(cs$hit, "#00FF00") &&
     identical(cs$miss, "#FF0000") &&
-    identical(cs$suggestion, "#FFFF00") &&
     identical(cs$albs, "#4444FF")
 
   if (is.null(cs$palette) || isTRUE(legacy)) {
@@ -259,7 +236,7 @@ normalize_color_state <- function(cs) {
 
   for (nm in c(
     "possible", "tested", "hit", "miss",
-    "suggestion", "albs", "impossible", "gridLines"
+    "albs", "impossible", "gridLines"
   )) {
     val <- cs[[nm]]
     if (!is.null(val) && !is.na(val) && nzchar(val)) {
@@ -756,290 +733,6 @@ apply_drop_window <- function(gr, rows, cols, line_mask = NULL) {
 
   gr$hitMask[rows, cols] <- sub_mask
   gr
-}
-
-# ---------- Suggestion logic (pure function) ----------
-
-generate_lawnmower_candidates <- function(nr, nc, radius) {
-  nr <- as.integer(nr)
-  nc <- as.integer(nc)
-  radius <- as.integer(radius)
-
-  if (is.na(nr) || is.na(nc) || nr < 1L || nc < 1L) {
-    return(list(rows = integer(), cols = integer(), centers = data.frame()))
-  }
-
-  step <- 2L * radius + 1L
-  if (is.na(step) || step < 1L) {
-    step <- 1L
-  }
-
-  row_positions <- seq.int(1L, nr, by = step)
-  col_positions <- seq.int(1L, nc, by = step)
-
-  centers <- vector("list", length(row_positions) * length(col_positions))
-  idx <- 1L
-  for (i in seq_along(row_positions)) {
-    cy <- row_positions[[i]]
-    cols <- if (i %% 2L == 1L) col_positions else rev(col_positions)
-    for (j in seq_along(cols)) {
-      centers[[idx]] <- list(
-        lat = cy,
-        long = cols[[j]],
-        row_idx = i,
-        col_idx = j
-      )
-      idx <- idx + 1L
-    }
-  }
-
-  centers_df <- if (length(centers)) {
-    data.frame(
-      lat = vapply(centers, `[[`, integer(1L), "lat"),
-      long = vapply(centers, `[[`, integer(1L), "long"),
-      row_idx = vapply(centers, `[[`, integer(1L), "row_idx"),
-      col_idx = vapply(centers, `[[`, integer(1L), "col_idx")
-    )
-  } else {
-    data.frame()
-  }
-
-  list(
-    rows = row_positions,
-    cols = col_positions,
-    centers = centers_df
-  )
-}
-
-last_manual_drop <- function(gr) {
-  lg <- gr$log
-  if (is.null(lg) || !is.data.frame(lg) || nrow(lg) == 0L) {
-    return(NULL)
-  }
-
-  idx <- which(!is.na(lg$action) & lg$action == "Drop" &
-    !is.na(lg$long) & !is.na(lg$lat))
-  if (!length(idx)) {
-    return(NULL)
-  }
-
-  last_idx <- idx[[length(idx)]]
-  long <- suppressWarnings(as.integer(lg$long[[last_idx]]))
-  lat <- suppressWarnings(as.integer(lg$lat[[last_idx]]))
-  if (is.na(long) || is.na(lat)) {
-    return(NULL)
-  }
-
-  list(long = long, lat = lat)
-}
-
-suggest_next_center <- function(
-  gr, R,
-  prefer_no_overlap = FALSE,
-  allow_partial = TRUE,
-  last_manual = NULL
-) {
-  nr <- gr$nr
-  nc <- gr$nc
-  if (is.null(nr) || is.null(nc) || is.na(nr) || is.na(nc) || nr < 1L || nc < 1L) {
-    return(NULL)
-  }
-
-  R <- as.integer(R)
-  if (is.na(R) || R < 0L) {
-    R <- 0L
-  }
-
-  possible <- apply_albs_mask(
-    gr$possible,
-    albsDone = gr$albsDone,
-    albsLat = gr$albsLat,
-    albsLong = gr$albsLong,
-    albsRad = gr$albsRad
-  )
-  hitMask <- gr$hitMask
-
-  if (!is.matrix(possible) || !is.matrix(hitMask)) {
-    return(NULL)
-  }
-
-  untested <- possible & !hitMask
-  if (!any(untested)) {
-    return(NULL)
-  }
-
-  tested_possible <- possible & hitMask
-
-  sat_untested <- build_sat(untested)
-  sat_tested <- build_sat(tested_possible)
-
-  lawnmower <- generate_lawnmower_candidates(nr, nc, R)
-
-  last <- last_manual
-  last_lat <- NA_integer_
-  last_long <- NA_integer_
-  if (!is.null(last)) {
-    if (!is.null(last$lat)) last_lat <- suppressWarnings(as.integer(last$lat))
-    if (!is.null(last$long)) last_long <- suppressWarnings(as.integer(last$long))
-  }
-
-  r_min <- 1L
-  r_max <- nr
-  c_min <- 1L
-  c_max <- nc
-
-  if (isTRUE(gr$albsDone) &&
-    !is.na(gr$albsLat) &&
-    !is.na(gr$albsLong) &&
-    !is.na(gr$albsRad)) {
-    albsLat <- as.integer(gr$albsLat)
-    albsLong <- as.integer(gr$albsLong)
-    albsRad <- as.integer(gr$albsRad)
-
-    r_min <- max(r_min, albsLat - albsRad)
-    r_max <- min(r_max, albsLat + albsRad)
-    c_min <- max(c_min, albsLong - albsRad)
-    c_max <- min(c_max, albsLong + albsRad)
-  }
-
-  if (!allow_partial && R > 0L) {
-    r_min <- max(r_min, R + 1L)
-    r_max <- min(r_max, nr - R)
-    c_min <- max(c_min, R + 1L)
-    c_max <- min(c_max, nc - R)
-  }
-
-  if (r_min > r_max || c_min > c_max) {
-    return(NULL)
-  }
-
-  row_positions <- lawnmower$rows
-  col_positions <- lawnmower$cols
-  row_positions <- row_positions[row_positions >= r_min & row_positions <= r_max]
-  col_positions <- col_positions[col_positions >= c_min & col_positions <= c_max]
-
-  if (!length(row_positions) || !length(col_positions)) {
-    return(NULL)
-  }
-
-  is_valid_center <- function(gr, cx, cy, radius) {
-    if (cx < 1L || cx > nc || cy < 1L || cy > nr) {
-      return(FALSE)
-    }
-
-    radius <- as.integer(radius)
-    if (is.na(radius) || radius < 0L) {
-      radius <- 0L
-    }
-
-    r1 <- max(1L, cy - radius)
-    r2 <- min(nr, cy + radius)
-    c1 <- max(1L, cx - radius)
-    c2 <- min(nc, cx + radius)
-
-    if (r1 > r2 || c1 > c2) {
-      return(FALSE)
-    }
-
-    if (isTRUE(gr$albsDone) &&
-      !is.na(gr$albsLat) &&
-      !is.na(gr$albsLong) &&
-      !is.na(gr$albsRad)) {
-      albsLat <- as.integer(gr$albsLat)
-      albsLong <- as.integer(gr$albsLong)
-      albsRad <- as.integer(gr$albsRad)
-
-      r1_albs <- max(1L, albsLat - albsRad)
-      r2_albs <- min(nr, albsLat + albsRad)
-      c1_albs <- max(1L, albsLong - albsRad)
-      c2_albs <- min(nc, albsLong + albsRad)
-
-      if (r1 < r1_albs || r2 > r2_albs || c1 < c1_albs || c2 > c2_albs) {
-        return(FALSE)
-      }
-    }
-
-    new_cells <- rect_sum(sat_untested, r1, c1, r2, c2)
-    if (new_cells <= 0L) {
-      return(FALSE)
-    }
-
-    if (!isTRUE(gr$hasHit)) {
-      overlap_cells <- rect_sum(sat_tested, r1, c1, r2, c2)
-      if (overlap_cells > 0L) {
-        return(FALSE)
-      }
-    }
-
-    TRUE
-  }
-
-  find_in_row <- function(row_idx, start_col_idx = 1L) {
-    if (row_idx < 1L || row_idx > length(row_positions)) {
-      return(NULL)
-    }
-
-    cy <- row_positions[[row_idx]]
-    cols <- if (row_idx %% 2L == 1L) col_positions else rev(col_positions)
-
-    if (start_col_idx < 1L) start_col_idx <- 1L
-    if (start_col_idx > length(cols)) {
-      return(NULL)
-    }
-
-    for (j in seq.int(start_col_idx, length(cols))) {
-      cx <- cols[[j]]
-      if (is_valid_center(gr, cx, cy, R)) {
-        return(list(long = cx, lat = cy))
-      }
-    }
-
-    NULL
-  }
-
-  row_idx <- NULL
-  if (!is.na(last_lat) && !is.na(last_long)) {
-    row_idx <- match(last_lat, row_positions)
-    if (is.na(row_idx)) {
-      row_idx <- NULL
-    }
-  }
-
-  if (!is.null(row_idx)) {
-    cols <- if (row_idx %% 2L == 1L) col_positions else rev(col_positions)
-
-    if (row_idx %% 2L == 1L) {
-      start_col_idx <- which(cols > last_long)
-    } else {
-      start_col_idx <- which(cols < last_long)
-    }
-    start_col_idx <- if (length(start_col_idx)) start_col_idx[[1L]] else length(cols) + 1L
-
-    hit <- find_in_row(row_idx, start_col_idx)
-    if (!is.null(hit)) {
-      return(hit)
-    }
-
-    if (row_idx < length(row_positions)) {
-      for (next_row in seq.int(row_idx + 1L, length(row_positions))) {
-        hit <- find_in_row(next_row, 1L)
-        if (!is.null(hit)) {
-          return(hit)
-        }
-      }
-    }
-
-    return(NULL)
-  }
-
-  for (row_idx in seq_along(row_positions)) {
-    hit <- find_in_row(row_idx, 1L)
-    if (!is.null(hit)) {
-      return(hit)
-    }
-  }
-
-  NULL
 }
 
 # ---------- Grid helpers ----------

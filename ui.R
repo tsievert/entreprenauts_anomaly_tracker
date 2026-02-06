@@ -130,7 +130,7 @@ ui <- navbarPage(
             bsCollapsePanel(
               "Drop coordinates",
               value = "drop_coords",
-              # Long/Lat side by side, suggestion button full-width below
+              # Long/Lat side by side
               fluidRow(
                 column(
                   width = 6,
@@ -147,20 +147,6 @@ ui <- navbarPage(
                     class = "numeric-input-common",
                     numericInput("dropLat", "Lat (Y)", value = NA_real_, min = 1)
                   )
-                )
-              ),
-              div(
-                style = "margin-top: 10px;",
-                actionButton(
-                  "useSuggestion",
-                  "Use suggested position",
-                  class = "btn-block btn-wrap"
-                ),
-                bsTooltip(
-                  "useSuggestion",
-                  title = "Auto-fill Long/Lat from the current suggestion (requires a suggestion).",
-                  placement = "right",
-                  trigger = "hover"
                 )
               )
             ),
@@ -279,7 +265,6 @@ ui <- navbarPage(
         h4("Search status"),
         verbatimTextOutput("gridDimensions"),
         verbatimTextOutput("remainingCellsTop"),
-        verbatimTextOutput("suggestedDropTop"),
         verbatimTextOutput("constraintSummary"),
         verbatimTextOutput("remainingCoordsTop"),
         # Responsive plot height: tracks viewport height
@@ -292,7 +277,7 @@ ui <- navbarPage(
             height = "100%"
           )
         ),
-        helpText("Click the grid to set Long/Lat; use ‘Use suggested position’ to auto-fill.")
+        helpText("Click the grid to set Long/Lat.")
       )
     )
   ),
@@ -378,7 +363,6 @@ ui <- navbarPage(
           textInput("colTested", "Tested cells", value = ""),
           textInput("colHit", "Remaining candidates after hit / hit markers / debug line", value = ""),
           textInput("colMiss", "Miss markers", value = ""),
-          textInput("colSuggestion", "Suggested drop center / outline", value = ""),
           textInput("colALBS", "ALBS window outline", value = ""),
           textInput("colImpossible", "Impossible / excluded area", value = ""),
           textInput("colGridLines", "Grid lines", value = "")
@@ -397,10 +381,7 @@ ui <- navbarPage(
       column(
         width = 6,
         wellPanel(
-          h4("Pathing preferences"),
-          checkboxInput("preferNoOverlap", "Prefer drops with no overlap", value = TRUE),
-          checkboxInput("allowPartial", "Allow partial coverage at edges", value = TRUE),
-          checkboxInput("wrapRows", "Wrap search when end of row reached", value = TRUE),
+          h4("Display preferences"),
           checkboxInput("debugOverlay", "Show debug overlay (constraints & candidates)", value = FALSE),
           checkboxInput("showDropMarkers", "Show markers for previous drops", value = TRUE),
           tags$hr(),
@@ -428,8 +409,7 @@ ui <- navbarPage(
         offset = 2,
         h3("Anomaly tracker"),
         p(
-          "Use the Search tab to step through a grid using probes of different radii.",
-          "The app suggests the next drop based on remaining untested cells."
+          "Use the Search tab to step through a grid using probes of different radii."
         ),
         tags$ul(
           tags$li("Use the ALBS section to restrict the search to a sub-window."),
