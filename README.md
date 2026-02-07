@@ -8,7 +8,7 @@ You can:
 - Create one or more “grids” (maps made of squares)
 - Drop different “probes” on the grid
 - Mark each drop as a **hit** or **miss**, with a direction
-- See which cells are still possible and get a suggested next drop
+- See which cells are still possible
 
 It’s meant as a simple helper tool for players, not an official product.
 
@@ -51,13 +51,6 @@ It’s meant as a simple helper tool for players, not an official product.
 
 4.  Your browser should open the **Anomaly Tracker** app.
 
-> ⚠️ **Current limitation**
->
-> The automatic coordinate suggestions are still a bit buggy.  
-> For the most reliable results, **click directly on the grid** in the
-> **Search** tab to pick coordinates instead of relying on the suggested
-> position.
-
 If all of that works, you can stop reading here and just use the app. 🙂
 
 ------------------------------------------------------------------------
@@ -66,13 +59,11 @@ If all of that works, you can stop reading here and just use the app. 🙂
 
 -   **Search**
     -   Pick an active grid and a probe type (radius).
-    -   Enter coordinates by hand or click on the grid, then use **“Use
-        suggested position”**.
+    -   Enter coordinates by hand or click on the grid.
     -   Mark the result as **Hit** or **Miss**, and (for hits) choose a
         direction (N, NE, E, …, Below).
     -   The app shows:
         -   How many candidate cells are left.
-        -   A suggested next drop location.
         -   (Optional) a **debug overlay** to visualise constraints and
             candidate cells.
 -   **ALBS window (sub-area search)**
@@ -94,13 +85,10 @@ If all of that works, you can stop reading here and just use the app. 🙂
     -   Randomise/shuffle colours with one click.
     -   Customise colours for:
         -   Possible / tested / hit / miss cells
-        -   Suggested drop, ALBS outline, impossible cells, grid lines
+        -   ALBS outline, impossible cells, grid lines
     -   See a small preview of all colour roles.
 -   **Settings**
-    -   Choose how the probe path is generated:
-        -   Prefer no overlap
-        -   Allow/forbid partial coverage at edges
-        -   Wrap rows or not
+    -   Toggle debug overlay and drop markers.
     -   Add or change named probe radii (e.g. “RudimentaryProbe”,
         “BasicProbe”, etc.).
 -   **Help**
@@ -189,7 +177,6 @@ Once the packages are installed (see Quick Start above):
 
     -   Manages grids and probes.
     -   Applies ALBS constraints.
-    -   Computes the next suggested drop.
     -   Records the move log.
     -   Draws the grid plot and colour previews.
 
@@ -197,7 +184,7 @@ Once the packages are installed (see Quick Start above):
     Shared helper functions and data structures:
 
     -   Grid creation and normalisation.
-    -   Path generation and suggestion logic.
+    -   Path generation helpers.
     -   Colour handling.
     -   State saving/loading.
 

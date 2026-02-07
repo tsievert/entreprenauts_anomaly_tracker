@@ -185,7 +185,6 @@ server <- function(input, output, session) {
     updateTextInput(session, "colTested", value = cs$tested %||% "#BBBBBB")
     updateTextInput(session, "colHit", value = cs$hit %||% "#00FF00")
     updateTextInput(session, "colMiss", value = cs$miss %||% "#FF0000")
-    updateTextInput(session, "colSuggestion", value = cs$suggestion %||% "#FFFF00")
     updateTextInput(session, "colALBS", value = cs$albs %||% "#4444FF")
     updateTextInput(session, "colImpossible", value = cs$impossible %||% "#000000")
     updateTextInput(session, "colGridLines", value = cs$gridLines %||% "#777777")
@@ -452,16 +451,15 @@ server <- function(input, output, session) {
     colTested = list(field = "tested", idx = 2L),
     colHit = list(field = "hit", idx = 3L),
     colMiss = list(field = "miss", idx = 4L),
-    colSuggestion = list(field = "suggestion", idx = 5L),
-    colALBS = list(field = "albs", idx = 6L),
-    colImpossible = list(field = "impossible", idx = 7L),
-    colGridLines = list(field = "gridLines", idx = 8L)
+    colALBS = list(field = "albs", idx = 5L),
+    colImpossible = list(field = "impossible", idx = 6L),
+    colGridLines = list(field = "gridLines", idx = 7L)
   )
 
   update_color_role <- function(input_id, field, idx) {
     cs <- rv$color_state
     pal <- cs$palette %||% "magma"
-    def <- get_viridis_colors(pal, 8L)[[idx]]
+    def <- get_viridis_colors(pal, 7L)[[idx]]
     cs[[field]] <- safe_color(input[[input_id]], cs[[field]] %||% def)
     rv$color_state <- cs
   }
@@ -475,7 +473,7 @@ server <- function(input, output, session) {
 
   observeEvent(input$shufflePalette, {
     pal <- input$viridisPalette %||% (rv$color_state$palette %||% "magma")
-    cols <- shuffle_viridis_colors(pal, 8L)
+    cols <- shuffle_viridis_colors(pal, 7L)
 
     cs <- rv$color_state
     cs$palette <- pal
@@ -483,10 +481,9 @@ server <- function(input, output, session) {
     cs$tested <- cols[[2L]]
     cs$hit <- cols[[3L]]
     cs$miss <- cols[[4L]]
-    cs$suggestion <- cols[[5L]]
-    cs$albs <- cols[[6L]]
-    cs$impossible <- cols[[7L]]
-    cs$gridLines <- cols[[8L]]
+    cs$albs <- cols[[5L]]
+    cs$impossible <- cols[[6L]]
+    cs$gridLines <- cols[[7L]]
     rv$color_state <- cs
   })
 
@@ -500,17 +497,16 @@ server <- function(input, output, session) {
     {
       cs <- rv$color_state
       pal <- cs$palette %||% "magma"
-      cols_def <- get_viridis_colors(pal, 8L)
+      cols_def <- get_viridis_colors(pal, 7L)
 
       cols <- c(
         possible   = safe_color(cs$possible, cols_def[[1L]]),
         tested     = safe_color(cs$tested, cols_def[[2L]]),
         hit        = safe_color(cs$hit, cols_def[[3L]]),
         miss       = safe_color(cs$miss, cols_def[[4L]]),
-        suggestion = safe_color(cs$suggestion, cols_def[[5L]]),
-        albs       = safe_color(cs$albs, cols_def[[6L]]),
-        impossible = safe_color(cs$impossible, cols_def[[7L]]),
-        gridLines  = safe_color(cs$gridLines, cols_def[[8L]])
+        albs       = safe_color(cs$albs, cols_def[[5L]]),
+        impossible = safe_color(cs$impossible, cols_def[[6L]]),
+        gridLines  = safe_color(cs$gridLines, cols_def[[7L]])
       )
 
       n <- length(cols)
@@ -530,93 +526,6 @@ server <- function(input, output, session) {
     },
     bg = "transparent"
   ) # harmless here too
-
-  # ---------- Suggestion logic wiring ----------
-
-  suggestion <- reactive({
-    gr <- current_grid()
-    if (is.null(gr)) {
-      return(NULL)
-    }
-    nm <- current_radius_name()
-    if (is.null(nm) || is.na(nm)) {
-      return(NULL)
-    }
-    R <- radius_of(nm)
-    if (is.na(R) || R < 0L) R <- 0L
-
-    prefer_no_overlap <- isTRUE(input$preferNoOverlap)
-    allow_partial <- isTRUE(input$allowPartial)
-
-    last_manual <- last_manual_drop(gr)
-
-    suggest_next_center(
-      gr,
-      R,
-      prefer_no_overlap = prefer_no_overlap,
-      allow_partial     = allow_partial,
-      last_manual       = last_manual
-    )
-  })
-
-  observeEvent(suggestion(),
-    {
-      s <- suggestion()
-      if (is.null(s)) {
-        return()
-      }
-      if (is.na(input$dropLong) || is.na(input$dropLat)) {
-        updateNumericInput(session, "dropLong", value = s$long)
-        updateNumericInput(session, "dropLat", value = s$lat)
-      }
-    },
-    ignoreNULL = TRUE
-  )
-
-  observeEvent(input$useSuggestion, {
-    s <- suggestion()
-    if (is.null(s)) {
-      return()
-    }
-    updateNumericInput(session, "dropLong", value = s$long)
-    updateNumericInput(session, "dropLat", value = s$lat)
-  })
-
-  output$suggestedDropTop <- renderText({
-    gr <- current_grid()
-    if (is.null(gr)) {
-      return("Suggested drop: none available")
-    }
-
-    mask <- apply_albs_mask(
-      gr$possible,
-      albsDone = gr$albsDone,
-      albsLat = gr$albsLat,
-      albsLong = gr$albsLong,
-      albsRad = gr$albsRad
-    ) & !gr$hitMask
-    idx <- which(mask, arr.ind = TRUE)
-    n <- nrow(idx)
-
-    if (n == 0L) {
-      return("Suggested drop: none available")
-    }
-
-    if (n == 1L) {
-      x <- idx[1, "col"]
-      y <- idx[1, "row"]
-      return(sprintf(
-        "Suggested drop: %d Long (X), %d Lat (Y) (final remaining candidate)",
-        x, y
-      ))
-    }
-
-    s <- suggestion()
-    if (is.null(s)) {
-      return("Suggested drop: none available")
-    }
-    sprintf("Suggested drop: %d Long (X), %d Lat (Y)", s$long, s$lat)
-  })
 
   # Constraint summary line – only when debug overlay is enabled
   output$constraintSummary <- renderText({
@@ -763,16 +672,15 @@ server <- function(input, output, session) {
 
       cs <- rv$color_state
       pal <- cs$palette %||% "magma"
-      cols_def <- get_viridis_colors(pal, 8L)
+      cols_def <- get_viridis_colors(pal, 7L)
 
       col_possible <- safe_color(cs$possible, cols_def[[1L]])
       col_tested <- safe_color(cs$tested, cols_def[[2L]])
       col_hit <- safe_color(cs$hit, cols_def[[3L]])
       col_miss <- safe_color(cs$miss, cols_def[[4L]])
-      col_suggestion <- safe_color(cs$suggestion, cols_def[[5L]])
-      col_albs <- safe_color(cs$albs, cols_def[[6L]])
-      col_impossible <- safe_color(cs$impossible, cols_def[[7L]])
-      col_gridLines <- safe_color(cs$gridLines, cols_def[[8L]])
+      col_albs <- safe_color(cs$albs, cols_def[[5L]])
+      col_impossible <- safe_color(cs$impossible, cols_def[[6L]])
+      col_gridLines <- safe_color(cs$gridLines, cols_def[[7L]])
 
       possible <- apply_albs_mask(
         gr$possible,
@@ -865,7 +773,7 @@ server <- function(input, output, session) {
               ymin = row - 0.5, ymax = row + 0.5
             ),
             fill = NA,
-            color = col_suggestion,
+            color = col_gridLines,
             linewidth = 0.4
           )
         }
@@ -973,21 +881,6 @@ server <- function(input, output, session) {
         }
       }
 
-      # Suggested next drop marker (kept on top)
-      s <- suggestion()
-      if (!is.null(s)) {
-        p <- p + annotate(
-          "point",
-          x = s$long,
-          y = s$lat,
-          shape = 21,
-          size = 3,
-          fill = col_suggestion,
-          color = col_gridLines,
-          stroke = 0.7
-        )
-      }
-
       # Pending center footprint (dashed outline)
       pending_center <- NULL
       cx_input <- suppressWarnings(as.integer(input$dropLong))
@@ -997,8 +890,6 @@ server <- function(input, output, session) {
         cx_input >= 1L && cy_input >= 1L &&
         cx_input <= nc && cy_input <= nr) {
         pending_center <- list(long = cx_input, lat = cy_input)
-      } else if (!is.null(s)) {
-        pending_center <- s
       }
 
       if (!is.null(pending_center)) {
@@ -1024,7 +915,7 @@ server <- function(input, output, session) {
                 ymin = r1_view - 0.5,
                 ymax = r2_view + 0.5,
                 fill = NA,
-                color = col_suggestion,
+                color = col_gridLines,
                 linewidth = 0.9,
                 linetype = "dashed"
               )
